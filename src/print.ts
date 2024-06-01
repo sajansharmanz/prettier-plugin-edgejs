@@ -44,13 +44,21 @@ export function printWithIndent(node: any, tabWidth: number): string {
       const openingAttributes = node.attributes
         .map((attr: any) => `${attr.attributeName}=${attr.attributeValue}`)
         .join(" ");
-      return `${getIndent({ tabWidth, adjustLevel: "increase" })}<${node.tagName}${openingAttributes ? " " + openingAttributes : ""}>`;
+
+      const openingEdgeProps = node.edgeProps
+        .map((prop: any) => `${prop.value}`)
+        .join(" ");
+      return `${getIndent({ tabWidth, adjustLevel: "increase" })}<${node.tagName}${openingEdgeProps ? " " + openingEdgeProps : ""}${openingAttributes ? " " + openingAttributes : ""}>`;
 
     case "selfClosingTag":
       const selfClosingAttributes = node.attributes
         .map((attr: any) => `${attr.attributeName}=${attr.attributeValue}`)
         .join(" ");
-      return `${getIndent({ tabWidth })}<${node.tagName}${selfClosingAttributes ? " " + selfClosingAttributes : ""}${["meta", "link", "input"].includes(node.tagName) ? ">" : "/>"}`;
+
+      const selfClosingEdgeProps = node.edgeProps
+        .map((prop: any) => `${prop.value}`)
+        .join(" ");
+      return `${getIndent({ tabWidth })}<${node.tagName}${selfClosingEdgeProps ? " " + selfClosingEdgeProps : ""}${selfClosingAttributes ? " " + selfClosingAttributes : ""}${["meta", "link", "input"].includes(node.tagName) ? ">" : "/>"}`;
 
     case "closingTag":
       return `${getIndent({ tabWidth, adjustLevel: "decrease", levelOverride: level - 1 })}</${node.tagName}>`;
