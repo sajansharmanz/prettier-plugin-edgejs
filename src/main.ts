@@ -11,6 +11,7 @@ export const languages: Array<SupportLanguage> = [
     tmScope: "text.html.edge",
     aceMode: "html",
     linguistLanguageId: 460509620,
+    vscodeLanguageIds: ["edge"],
   },
 ];
 
