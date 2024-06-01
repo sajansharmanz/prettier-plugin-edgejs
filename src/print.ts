@@ -50,7 +50,7 @@ export function printWithIndent(node: any, tabWidth: number): string {
       const selfClosingAttributes = node.attributes
         .map((attr: any) => `${attr.attributeName}=${attr.attributeValue}`)
         .join(" ");
-      return `${getIndent({ tabWidth })}<${node.tagName}${selfClosingAttributes ? " " + selfClosingAttributes : ""} />`;
+      return `${getIndent({ tabWidth })}<${node.tagName}${selfClosingAttributes ? " " + selfClosingAttributes : ""}${["meta", "link", "input"].includes(node.tagName) ? ">" : "/>"}`;
 
     case "closingTag":
       return `${getIndent({ tabWidth, adjustLevel: "decrease", levelOverride: level - 1 })}</${node.tagName}>`;
@@ -75,6 +75,7 @@ export function printWithIndent(node: any, tabWidth: number): string {
       return `${getIndent({ tabWidth })}${node.value}`;
 
     case "dtd":
+      level = 0;
       return `${getIndent({ tabWidth })}${node.value}`;
 
     case "scriptElement":
@@ -101,7 +102,11 @@ export function printWithIndent(node: any, tabWidth: number): string {
         levelOverride--;
       } else if (value.includes("@else")) {
         levelOverride--;
-      } else if (value.includes("@!") || value.includes("@let")) {
+      } else if (
+        value.includes("@!") ||
+        value.includes("@let") ||
+        value.includes("@vite")
+      ) {
         adjustLevel = "unchanged";
       } else {
         adjustLevel = "increase";
