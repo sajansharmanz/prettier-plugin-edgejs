@@ -66,16 +66,16 @@ export function printWithIndent(node: any, tabWidth: number): string {
       return `${getIndent({ tabWidth })}${node.value}`;
 
     case "htmlComment":
-      return `${getIndent({ tabWidth })}<!-- ${node.value} -->`;
+      return `${getIndent({ tabWidth })}${node.value}`;
 
     case "htmlConditionalComment":
-      return `${getIndent({ tabWidth })}<!--[if ${node.value}]>`;
+      return `${getIndent({ tabWidth })}${node.value}`;
 
     case "cdata":
-      return `${getIndent({ tabWidth })}<![CDATA[${node.value}]]>`;
+      return `${getIndent({ tabWidth })}${node.value}`;
 
     case "dtd":
-      return `${getIndent({ tabWidth })}<!DOCTYPE ${node.value}>`;
+      return `${getIndent({ tabWidth })}${node.value}`;
 
     case "scriptElement":
       return `${getIndent({ tabWidth })}${node.value}`;
@@ -84,7 +84,7 @@ export function printWithIndent(node: any, tabWidth: number): string {
       return `${getIndent({ tabWidth })}${node.value}`;
 
     case "edgeComment":
-      return `${getIndent({ tabWidth })}{{-- ${node.value} --}}`;
+      return `${getIndent({ tabWidth })}${node.value}`;
 
     case "edgeMustache":
     case "edgeSafeMustache":
