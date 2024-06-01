@@ -1,0 +1,43 @@
+{
+  "name": "prettier-plugin-edgejs",
+  "version": "0.1.0",
+  "description": "EdgeJS Prettier Plugin",
+  "keywords": [
+    "edge",
+    "edgejs",
+    "prettier",
+    "plugin"
+  ],
+  "author": {
+    "name": "Sajan Sharma",
+    "email": "sajansharmanz@gmail.com",
+    "url": "https://sajansharma.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sajansharmanz/prettier-plugin-edgejs.git"
+  },
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "dist",
+    "index.d.ts"
+  ],
+  "main": "./dist/main.umd.cjs",
+  "module": "./dist/main.js",
+  "types": "./index.d.ts",
+  "exports": {
+    "types": "./index.d.ts",
+    "import": "./dist/main.js",
+    "require": "./dist/main.umd.cjs"
+  },
+  "scripts": {
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^5.2.10"
+  },
+  "dependencies": {
+    "prettier": "^3.2.5"
+  }
+}
