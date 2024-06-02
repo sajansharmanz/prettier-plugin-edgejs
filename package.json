@@ -1,6 +1,6 @@
 {
   "name": "prettier-edgejs",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "EdgeJS Prettier Plugin",
   "keywords": [
     "edge",
@@ -38,7 +38,7 @@
     "vite": "^5.2.10"
   },
   "dependencies": {
-    "edgejs-parser": "^0.1.2",
+    "edgejs-parser": "^0.1.3",
     "prettier": "^3.2.5"
   }
 }
