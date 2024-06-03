@@ -42,7 +42,12 @@ export function printWithIndent(node: any, tabWidth: number): string {
 
     case "openingTag":
       const openingAttributes = node.attributes
-        .map((attr: any) => `${attr.attributeName}=${attr.attributeValue}`)
+        .map((attr: any) => {
+          if (attr.attributeValue) {
+            return `${attr.attributeName}=${attr.attributeValue}`;
+          }
+          return `${attr.attributeName}`;
+        })
         .join(" ");
 
       const openingEdgeProps = node.edgeProps
@@ -52,7 +57,12 @@ export function printWithIndent(node: any, tabWidth: number): string {
 
     case "selfClosingTag":
       const selfClosingAttributes = node.attributes
-        .map((attr: any) => `${attr.attributeName}=${attr.attributeValue}`)
+        .map((attr: any) => {
+          if (attr.attributeValue) {
+            return `${attr.attributeName}=${attr.attributeValue}`;
+          }
+          return `${attr.attributeName}`;
+        })
         .join(" ");
 
       const selfClosingEdgeProps = node.edgeProps
