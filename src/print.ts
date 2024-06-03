@@ -68,7 +68,26 @@ export function printWithIndent(node: any, tabWidth: number): string {
       const selfClosingEdgeProps = node.edgeProps
         .map((prop: any) => `${prop.value}`)
         .join(" ");
-      return `${getIndent({ tabWidth })}<${node.tagName}${selfClosingEdgeProps ? " " + selfClosingEdgeProps : ""}${selfClosingAttributes ? " " + selfClosingAttributes : ""}${["meta", "link", "input", "img"].includes(node.tagName) ? ">" : "/>"}`;
+      return `${getIndent({ tabWidth })}<${node.tagName}${selfClosingEdgeProps ? " " + selfClosingEdgeProps : ""}${selfClosingAttributes ? " " + selfClosingAttributes : ""}${
+        [
+          "area",
+          "base",
+          "br",
+          "col",
+          "embed",
+          "hr",
+          "img",
+          "input",
+          "link",
+          "meta",
+          "param",
+          "source",
+          "track",
+          "wbr",
+        ].includes(node.tagName)
+          ? ">"
+          : "/>"
+      }`;
 
     case "closingTag":
       return `${getIndent({ tabWidth, adjustLevel: "decrease", levelOverride: level - 1 })}</${node.tagName}>`;
