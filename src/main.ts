@@ -1,4 +1,10 @@
-import { Options, Parser, Printer, SupportLanguage } from "prettier";
+import type {
+  Options,
+  Parser,
+  Printer,
+  SupportLanguage,
+  SupportOptions,
+} from "prettier";
 import edgeParser from "edgejs-parser";
 
 import print from "./print";
@@ -36,5 +42,11 @@ export const printers: { [key: string]: Printer } = {
   },
 };
 
-export const defaultOptions: Options = {};
-export const options = {};
+export const defaultOptions: Options = {
+  useTabs: false,
+  tabWidth: 4,
+  printWidth: 80,
+  singleAttributePerLine: false,
+};
+
+export const options: SupportOptions = {};

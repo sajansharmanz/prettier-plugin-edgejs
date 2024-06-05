@@ -7,5 +7,13 @@ export default defineConfig({
       name: "prettier-plugin-edgejs",
       fileName: "main",
     },
+    rollupOptions: {
+      external: ["uglify-js"],
+      output: {
+        globals: {
+          "uglify-js": "uglify-js",
+        },
+      },
+    },
   },
 });
