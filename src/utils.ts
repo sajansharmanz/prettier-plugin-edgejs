@@ -92,24 +92,21 @@ function countLeadingSpaces(value: string) {
 }
 
 export function formatEdgeValue(node: EdgeTagNode, indent: string) {
-  if (node.value.includes("@let")) {
-    return `${indent}${node.value
-      .split("\n")
-      .map((value, index) => {
-        if (index === 0) {
-          return `${value.trim()}`;
-        }
+  return `${indent}${node.value
+    .split("\n")
+    .map((value, index) => {
+      if (index === 0) {
+        return `${value.trim()}`;
+      }
 
-        if (index === node.value.split("\n").length - 1) {
-          return `${indent}${value.trim()}`;
-        }
+      if (index === node.value.split("\n").length - 1) {
+        return `${indent}${value.trim()}`;
+      }
 
-        const originalWhitespace = countLeadingSpaces(value);
+      const originalWhitespace = countLeadingSpaces(value);
 
-        return `${" ".repeat(Math.max(indent.length, originalWhitespace))}${value.trim()}`;
-      })
-      .join("\n")}`;
-  }
-
-  return `${indent}${node.value.trim()}`;
+      return `${" ".repeat(Math.max(indent.length, originalWhitespace))}${value.trim()}`;
+    })
+    .join("\n")
+    .trim()}`;
 }
