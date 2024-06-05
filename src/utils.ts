@@ -108,5 +108,5 @@ export function formatEdgeValue(node: EdgeTagNode, indent: string) {
       return `${" ".repeat(Math.max(indent.length, originalWhitespace))}${value.trim()}`;
     })
     .join("\n")
-    .trim()}`;
+    .trim()}\n`;
 }

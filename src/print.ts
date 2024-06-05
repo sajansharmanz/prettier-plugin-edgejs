@@ -25,32 +25,61 @@ class Printer {
     this.singleAttributePerLine = options.singleAttributePerLine ?? false;
   }
 
-  handlePrint(node: ParserNode): string {
+  handlePrint(
+    node: ParserNode,
+    previousNode: ParserNode | undefined,
+    nextNode: ParserNode | undefined
+  ): string {
     switch (node.type) {
       case "document":
         this.level = 0;
         return node.children
-          .map((child: ParserNode) => this.handlePrint(child))
-          .join("\n");
+          .map((child: ParserNode, index) =>
+            this.handlePrint(
+              child,
+              node.children[index - 1],
+              node.children[index + 1]
+            )
+          )
+          .join("");
       case "dtd":
         this.level = 0;
-        return `${this.getIndent()}${node.value}`;
+        return `${this.getIndent()}${node.value}\n`;
       case "htmlComment":
       case "htmlConditionalComment":
       case "cdata":
       case "scriptlet":
-        return `${this.getIndent()}${node.value.trim()}`;
+        return `${this.getIndent()}${node.value.trim()}\n`;
       case "scriptElement":
-        return `${formatJS(node, this.tabWidth, this.getIndent(), this.getIndent(this.level + 1))}`;
+        return `${formatJS(node, this.tabWidth, this.getIndent(), this.getIndent(this.level + 1))}\n`;
       case "styleElement":
-        return `${formatCss(node, this.getIndent(), this.getIndent(this.level + 1), this.getIndent(1))}`;
+        return `${formatCss(node, this.getIndent(), this.getIndent(this.level + 1), this.getIndent(1))}\n`;
       case "edgeComment":
-        return `${this.getIndent()}${addEdgeCommentSpacing(node.value.trim())}`;
+        return `${this.getIndent()}${addEdgeCommentSpacing(node.value.trim())}\n`;
       case "edgeMustache":
       case "edgeEscapedMustache":
-        return `${this.getIndent()}${addEdgeMustacheSpacing(node.value.trim())}`;
+        let useIndentation = true;
+        let useLineBreak = true;
+
+        if (
+          previousNode?.type === "htmlText" ||
+          previousNode?.type === "edgeMustache" ||
+          previousNode?.type === "edgeEscapedMustache"
+        ) {
+          useIndentation = false;
+        }
+
+        if (
+          nextNode?.type === "htmlText" ||
+          nextNode?.type === "edgeMustache" ||
+          nextNode?.type === "edgeEscapedMustache"
+        ) {
+          useLineBreak = false;
+        }
+
+        return `${useIndentation ? this.getIndent() : ""}${addEdgeMustacheSpacing(node.value)}${useLineBreak ? "\n" : " "}`;
       case "edgeSafeMustache":
-        return `${this.getIndent()}${addEdgeSafeMustacheSpacing(node.value.trim())}`;
+        return `${this.getIndent()}${addEdgeSafeMustacheSpacing(node.value.trim())}\n`;
       case "openingTag":
       case "voidTag":
         let attrs = node.attributes
@@ -102,12 +131,12 @@ class Printer {
           const closingNewline =
             combinedLength - 2 > 0 ? "\n" + closingIndentation : "";
 
-          return `${tagIndentation}<${node.tagName}${attrs ? "\n" + attrs : ""}${edgeMustaches ? "\n" + edgeMustaches : ""}${edgeProps ? "\n" + edgeProps : ""}${closingNewline}>`;
+          return `${tagIndentation}<${node.tagName}${attrs ? "\n" + attrs : ""}${edgeMustaches ? "\n" + edgeMustaches : ""}${edgeProps ? "\n" + edgeProps : ""}${closingNewline}>\n`;
         }
 
-        return `${tagIndentation}<${node.tagName}${printAttribute(attrs)}${printAttribute(edgeMustaches)}${printAttribute(edgeProps)}>`;
+        return `${tagIndentation}<${node.tagName}${printAttribute(attrs)}${printAttribute(edgeMustaches)}${printAttribute(edgeProps)}>\n`;
       case "closingTag":
-        return `${this.getIndent(this.level - 1, "decrease")}</${node.tagName}>`;
+        return `${this.getIndent(this.level - 1, "decrease")}</${node.tagName}>\n`;
       case "edgeTag":
         const nodeValue = node.value;
         let indentAdjustment: IndentAdjustment = "none";
@@ -133,11 +162,36 @@ class Printer {
           this.getIndent(levelOverride, indentAdjustment)
         );
       case "htmlText":
-        return node.value
+        let useIndentation2 = true;
+        let useLineBreak2 = true;
+
+        if (
+          previousNode?.type === "edgeMustache" ||
+          previousNode?.type === "edgeSafeMustache"
+        ) {
+          useIndentation2 = false;
+        }
+
+        if (
+          nextNode?.type === "edgeMustache" ||
+          nextNode?.type === "edgeSafeMustache" ||
+          nextNode?.type === "htmlText"
+        ) {
+          useLineBreak2 = false;
+        }
+
+        return `${node.value
           .split("\n")
-          .map((v) => `${this.getIndent()}${v.trim()}`)
+          .map((value, index) => {
+            if (index === 0) {
+              return `${useIndentation2 ? this.getIndent() : ""}${value}`;
+            }
+
+            return `${this.getIndent()}${value.trim()}`;
+          })
           .join("\n")
-          .trimEnd();
+          .trimEnd()}${useLineBreak2 ? "\n" : " "}`;
+
       default:
         return "";
     }
@@ -177,7 +231,7 @@ function print(path: AstPath, options: ParserOptions) {
   const node = path.getNode();
 
   const printer = new Printer(options);
-  return printer.handlePrint(node);
+  return printer.handlePrint(node, undefined, undefined);
 }
 
 export default print;
