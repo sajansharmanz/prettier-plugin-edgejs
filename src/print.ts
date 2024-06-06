@@ -103,8 +103,11 @@ class Printer {
           .map((mustache) => addEdgeMustacheSpacing(mustache.value))
           .join(" ");
 
+        let comments = node.comments.map((comment) => comment.value).join(" ");
+
         const combinedLength =
-          `${attrs} ${edgeProps} ${edgeMustaches} ${edgeTagProps}`.length;
+          `${attrs} ${edgeProps} ${edgeMustaches} ${edgeTagProps} ${comments}`
+            .length;
         const indentation = this.getIndent(this.level + 1);
         const tagIndentation = this.getIndent(
           undefined,
@@ -138,6 +141,10 @@ class Printer {
             )
             .join("\n");
 
+          comments = node.comments
+            .map((comment) => `${indentation}${comment.value}`)
+            .join("\n");
+
           const closingNewline =
             combinedLength - 2 > 0 ? "\n" + closingIndentation : "";
 
@@ -160,6 +167,25 @@ class Printer {
                   })
                   .join("\n")
               : ""
+          }${
+            comments
+              ? "\n" +
+                comments
+                  .split("\n")
+                  .map((value, index) => {
+                    if (
+                      index === 0 ||
+                      index === comments.split("\n").length - 1
+                    ) {
+                      return `${indentation}${value.trim()}`;
+                    }
+
+                    const originalWhitespace = countLeadingSpaces(value);
+
+                    return `${" ".repeat(Math.max(indentation.length, originalWhitespace))}${value.trim()}`;
+                  })
+                  .join("\n")
+              : ""
           }${closingNewline}>\n`;
         }
 
@@ -171,6 +197,19 @@ class Printer {
                 index === 0 ||
                 index === edgeTagProps.split("\n").length - 1
               ) {
+                return `${value}`;
+              }
+
+              const originalWhitespace = countLeadingSpaces(value);
+
+              return `${" ".repeat(Math.max(indentation.length, originalWhitespace))}${value.trim()}`;
+            })
+            .join("\n")
+        )}${printAttribute(
+          comments
+            .split("\n")
+            .map((value, index) => {
+              if (index === 0 || index === comments.split("\n").length - 1) {
                 return `${value}`;
               }
 

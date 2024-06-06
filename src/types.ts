@@ -21,6 +21,7 @@ export interface OpeningTagNode extends BaseNode {
   edgeTagProps: EdgeTagPropsNode[];
   edgeMustaches: EdgeMustacheNode[];
   attributes: AttributeNode[];
+  comments: EdgeCommentNode[];
 }
 
 export interface VoidTagNode extends BaseNode {
@@ -30,6 +31,7 @@ export interface VoidTagNode extends BaseNode {
   edgeTagProps: EdgeTagPropsNode[];
   edgeMustaches: EdgeMustacheNode[];
   attributes: AttributeNode[];
+  comments: EdgeCommentNode[];
 }
 
 export interface ClosingTagNode extends BaseNode {

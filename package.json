@@ -1,6 +1,6 @@
 {
   "name": "prettier-edgejs",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "EdgeJS Prettier Plugin",
   "keywords": [
     "edge",
@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "css": "^3.0.0",
-    "edgejs-parser": "^0.2.3",
+    "edgejs-parser": "^0.2.4",
     "prettier": "^3.2.5",
     "uglify-js": "^3.17.4"
   }
