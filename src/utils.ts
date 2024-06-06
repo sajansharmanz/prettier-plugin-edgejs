@@ -86,7 +86,7 @@ export function formatJS(
     .join("\n")}\n${tagIndent}</script>`;
 }
 
-function countLeadingSpaces(value: string) {
+export function countLeadingSpaces(value: string) {
   const match = value.match(/^\s*/);
   return match ? match[0].length : 0;
 }

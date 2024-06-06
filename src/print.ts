@@ -4,6 +4,7 @@ import {
   addEdgeCommentSpacing,
   addEdgeMustacheSpacing,
   addEdgeSafeMustacheSpacing,
+  countLeadingSpaces,
   formatCss,
   formatEdgeValue,
   formatJS,
@@ -94,11 +95,16 @@ class Printer {
           .map((prop) => addEdgeMustacheSpacing(prop.value))
           .join(" ");
 
+        let edgeTagProps = node.edgeTagProps
+          .map((prop) => prop.value)
+          .join(" ");
+
         let edgeMustaches = node.edgeMustaches
           .map((mustache) => addEdgeMustacheSpacing(mustache.value))
           .join(" ");
 
-        const combinedLength = `${attrs} ${edgeProps} ${edgeMustaches}`.length;
+        const combinedLength =
+          `${attrs} ${edgeProps} ${edgeMustaches} ${edgeTagProps}`.length;
         const indentation = this.getIndent(this.level + 1);
         const tagIndentation = this.getIndent(
           undefined,
@@ -121,6 +127,10 @@ class Printer {
             )
             .join("\n");
 
+          edgeTagProps = node.edgeTagProps
+            .map((prop) => `${indentation}${prop.value}`)
+            .join("\n");
+
           edgeMustaches = node.edgeMustaches
             .map(
               (mustache) =>
@@ -131,10 +141,45 @@ class Printer {
           const closingNewline =
             combinedLength - 2 > 0 ? "\n" + closingIndentation : "";
 
-          return `${tagIndentation}<${node.tagName}${attrs ? "\n" + attrs : ""}${edgeMustaches ? "\n" + edgeMustaches : ""}${edgeProps ? "\n" + edgeProps : ""}${closingNewline}>\n`;
+          return `${tagIndentation}<${node.tagName}${attrs ? "\n" + attrs : ""}${edgeMustaches ? "\n" + edgeMustaches : ""}${edgeProps ? "\n" + edgeProps : ""}${
+            edgeTagProps
+              ? "\n" +
+                edgeTagProps
+                  .split("\n")
+                  .map((value, index) => {
+                    if (
+                      index === 0 ||
+                      index === edgeTagProps.split("\n").length - 1
+                    ) {
+                      return `${indentation}${value.trim()}`;
+                    }
+
+                    const originalWhitespace = countLeadingSpaces(value);
+
+                    return `${" ".repeat(Math.max(indentation.length, originalWhitespace))}${value.trim()}`;
+                  })
+                  .join("\n")
+              : ""
+          }${closingNewline}>\n`;
         }
 
-        return `${tagIndentation}<${node.tagName}${printAttribute(attrs)}${printAttribute(edgeMustaches)}${printAttribute(edgeProps)}>\n`;
+        return `${tagIndentation}<${node.tagName}${printAttribute(attrs)}${printAttribute(edgeMustaches)}${printAttribute(edgeProps)}${printAttribute(
+          edgeTagProps
+            .split("\n")
+            .map((value, index) => {
+              if (
+                index === 0 ||
+                index === edgeTagProps.split("\n").length - 1
+              ) {
+                return `${value}`;
+              }
+
+              const originalWhitespace = countLeadingSpaces(value);
+
+              return `${" ".repeat(Math.max(indentation.length, originalWhitespace))}${value.trim()}`;
+            })
+            .join("\n")
+        )}>\n`;
       case "closingTag":
         return `${this.getIndent(this.level - 1, "decrease")}</${node.tagName}>\n`;
       case "edgeTag":
@@ -150,7 +195,10 @@ class Printer {
         } else if (
           nodeValue.includes("@!") ||
           nodeValue.includes("@let") ||
-          nodeValue.includes("@vite")
+          nodeValue.includes("@vite") ||
+          nodeValue.match(/^@include\(.*/)?.length ||
+          nodeValue.match(/^@includeIf\(.*/)?.length ||
+          !nodeValue.includes("(")
         ) {
           indentAdjustment = "none";
         } else {

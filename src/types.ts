@@ -18,6 +18,7 @@ export interface OpeningTagNode extends BaseNode {
   type: "openingTag";
   tagName: string;
   edgeProps: EdgePropsNode[];
+  edgeTagProps: EdgeTagPropsNode[];
   edgeMustaches: EdgeMustacheNode[];
   attributes: AttributeNode[];
 }
@@ -26,6 +27,7 @@ export interface VoidTagNode extends BaseNode {
   type: "voidTag";
   tagName: string;
   edgeProps: EdgePropsNode[];
+  edgeTagProps: EdgeTagPropsNode[];
   edgeMustaches: EdgeMustacheNode[];
   attributes: AttributeNode[];
 }
@@ -100,6 +102,11 @@ export interface EdgePropsNode extends BaseNode {
   value: string;
 }
 
+export interface EdgeTagPropsNode extends BaseNode {
+  type: "edgeTagProps";
+  value: string;
+}
+
 export interface AttributeNode extends BaseNode {
   type: "attribute";
   attributeName: string;
@@ -125,6 +132,7 @@ export type ParserNode =
   | EdgeEscapedMustacheNode
   | EdgeTagNode
   | EdgePropsNode
+  | EdgeTagPropsNode
   | AttributeNode;
 
 export type IndentAdjustment = "increase" | "decrease" | "none";
