@@ -61,10 +61,6 @@ class Printer {
       case "edgeEscapedMustache":
         let useIndentation = true;
         let useLineBreak = true;
-        const noSpaceAtEnd =
-          nextNode &&
-          nextNode.type === "htmlText" &&
-          /^[.,!?:;"'(){}[\]<>%$€£°#&@]/.test(nextNode.value.charAt(0));
 
         if (
           previousNode?.type === "htmlText" ||
@@ -82,7 +78,7 @@ class Printer {
           useLineBreak = false;
         }
 
-        return `${useIndentation ? this.getIndent() : ""}${addEdgeMustacheSpacing(node.value)}${useLineBreak ? "\n" : noSpaceAtEnd ? "" : " "}`;
+        return `${useIndentation ? this.getIndent() : ""}${addEdgeMustacheSpacing(node.value)}${useLineBreak ? "\n" : " "}`;
       case "edgeSafeMustache":
         return `${this.getIndent()}${addEdgeSafeMustacheSpacing(node.value.trim())}\n`;
       case "openingTag":
