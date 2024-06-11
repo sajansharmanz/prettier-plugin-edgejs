@@ -1,5 +1,29 @@
 import type { AstPath, ParserOptions } from "prettier";
-import type { IndentAdjustment, ParserNode } from "./types";
+import type {
+  AttributeNode,
+  CdataNode,
+  ClosingTagNode,
+  DocumentNode,
+  DtdNode,
+  EdgeCommentNode,
+  EdgeEscapedMustacheNode,
+  EdgeMustacheNode,
+  EdgePropsNode,
+  EdgeSafeMustacheNode,
+  EdgeTagNode,
+  EdgeTagPropsNode,
+  HtmlCommentNode,
+  HtmlConditionalCommentNode,
+  HtmlTextNode,
+  IndentAdjustment,
+  OpeningTagNode,
+  ParserNode,
+  ScriptElementNode,
+  ScriptletNode,
+  StyleElementNode,
+  VoidTagNode,
+  LineBreakNode,
+} from "./types";
 import {
   addEdgeCommentSpacing,
   addEdgeMustacheSpacing,
@@ -8,7 +32,6 @@ import {
   formatCss,
   formatEdgeValue,
   formatJS,
-  printAttribute,
 } from "./utils";
 
 class Printer {
@@ -26,6 +49,256 @@ class Printer {
     this.singleAttributePerLine = options.singleAttributePerLine ?? false;
   }
 
+  private getIndent(
+    levelOverride?: number,
+    indentAdjustment: IndentAdjustment = "none"
+  ) {
+    const level =
+      levelOverride !== undefined ? Math.max(levelOverride, 0) : this.level;
+    this.adjustIndentLevel(indentAdjustment);
+
+    return `${this.useTabs ? "\t" : " ".repeat(this.tabWidth * level)}`;
+  }
+
+  private adjustIndentLevel(indentAdjustment: IndentAdjustment) {
+    if (indentAdjustment === "increase") this.level++;
+    else if (indentAdjustment === "decrease") this.level--;
+  }
+
+  private formatMultilineValue(
+    nodeValue: string,
+    indent: string,
+    indentFirstLine: boolean = true
+  ) {
+    return nodeValue
+      .split("\n")
+      .map((line, index, array) => {
+        if (index === 0)
+          return `${indentFirstLine ? indent : ""}${line.trim()}`;
+        if (index === array.length - 1) return `${indent}${line.trim()}`;
+
+        const originalWhitespace = countLeadingSpaces(line);
+        return `${" ".repeat(Math.max(indent.length, originalWhitespace))}${line.trim()}`;
+      })
+      .join("\n");
+  }
+
+  private formatAttributes(attributes: AttributeNode[], indent = "") {
+    return attributes
+      .map((attr) =>
+        attr.attributeValue
+          ? `${indent}${attr.attributeName}=${addEdgeMustacheSpacing(attr.attributeValue)}`
+          : `${indent}${attr.attributeName}`
+      )
+      .join(indent ? "\n" : " ");
+  }
+
+  private formatEdgeProps(
+    props: EdgePropsNode[] | EdgeMustacheNode[],
+    indent = ""
+  ) {
+    return props
+      .map((prop) => `${indent}${addEdgeMustacheSpacing(prop.value)}`)
+      .join(indent ? "\n" : " ");
+  }
+
+  private formatEdgeTagProps(props: EdgeTagPropsNode[], indent = "") {
+    return props
+      .map((prop) => `${indent}${prop.value}`)
+      .join(indent ? "\n" : " ");
+  }
+
+  private formatComments(comments: EdgeCommentNode[], indent = "") {
+    return comments
+      .map((comment) => `${indent}${comment.value}`)
+      .join(indent ? "\n" : " ");
+  }
+
+  private printDocumentNode(node: DocumentNode) {
+    this.level = 0;
+    return node.children
+      .map((child, index, array) =>
+        this.handlePrint(child, array[index - 1], array[index + 1])
+      )
+      .join("");
+  }
+
+  private printDTDNode(node: DtdNode) {
+    return `${this.getIndent()}${node.value}\n`;
+  }
+
+  private printStandardNode(
+    node:
+      | HtmlCommentNode
+      | HtmlConditionalCommentNode
+      | CdataNode
+      | ScriptletNode
+  ) {
+    return `${this.formatMultilineValue(node.value, this.getIndent())}\n`;
+  }
+
+  private printScriptElementNode(node: ScriptElementNode) {
+    return `${formatJS(node, this.tabWidth, this.getIndent(), this.getIndent(this.level + 1))}\n`;
+  }
+
+  private printStyleElementNode(node: StyleElementNode) {
+    return `${formatCss(node, this.getIndent(), this.getIndent(this.level + 1), this.getIndent(1))}\n`;
+  }
+
+  private printEdgeComment(node: EdgeCommentNode) {
+    return `${this.formatMultilineValue(addEdgeCommentSpacing(node.value.trim()), this.getIndent())}\n`;
+  }
+
+  private printEdgeMustacheNode(
+    node: EdgeMustacheNode | EdgeEscapedMustacheNode | EdgeSafeMustacheNode,
+    previousNode?: ParserNode,
+    nextNode?: ParserNode
+  ) {
+    const useIndentation = !(
+      previousNode?.type === "htmlText" ||
+      previousNode?.type === "edgeMustache" ||
+      previousNode?.type === "edgeEscapedMustache" ||
+      previousNode?.type === "edgeSafeMustache"
+    );
+
+    const useLineBreak = !(
+      nextNode?.type === "htmlText" ||
+      nextNode?.type === "edgeMustache" ||
+      nextNode?.type === "edgeEscapedMustache" ||
+      nextNode?.type === "edgeSafeMustache"
+    );
+
+    let result = `${useIndentation ? this.getIndent() : ""}`;
+
+    const nodeValue =
+      node.type === "edgeSafeMustache"
+        ? addEdgeSafeMustacheSpacing(node.value)
+        : addEdgeMustacheSpacing(node.value);
+
+    result += useLineBreak ? nodeValue.trimEnd() : nodeValue;
+    result += useLineBreak ? "\n" : "";
+
+    return result;
+  }
+
+  private printOpeningNode(node: OpeningTagNode | VoidTagNode) {
+    let attrs = this.formatAttributes(node.attributes);
+    let edgeProps = this.formatEdgeProps(node.edgeProps);
+    let edgeTagProps = this.formatEdgeTagProps(node.edgeTagProps);
+    let edgeMustaches = this.formatEdgeProps(node.edgeMustaches);
+    let comments = this.formatComments(node.comments);
+
+    const combinedLength =
+      `${attrs} ${edgeProps} ${edgeMustaches} ${edgeTagProps} ${comments}`
+        .length;
+    const indentation = this.getIndent(this.level + 1);
+    const tagIndentation = this.getIndent(
+      undefined,
+      node.type === "openingTag" ? "increase" : "none"
+    );
+    const closingIndentation = this.getIndent(
+      node.type === "openingTag" ? this.level - 1 : this.level
+    );
+
+    if (combinedLength > this.printWidth || this.singleAttributePerLine) {
+      attrs = this.formatAttributes(node.attributes, indentation);
+      edgeProps = this.formatEdgeProps(node.edgeProps, indentation);
+      edgeTagProps = this.formatEdgeTagProps(node.edgeTagProps, indentation);
+      edgeMustaches = this.formatEdgeProps(node.edgeMustaches, indentation);
+      comments = this.formatComments(node.comments, indentation);
+
+      const closingNewline =
+        combinedLength - 2 > 0 ? `\n${closingIndentation}` : "";
+
+      return `${tagIndentation}<${node.tagName}${attrs ? `\n${attrs}` : ""}${edgeMustaches ? `\n${edgeMustaches}` : ""}${edgeProps ? `\n${edgeProps}` : ""}${
+        edgeTagProps
+          ? `\n${this.formatMultilineValue(edgeTagProps, indentation)}`
+          : ""
+      }${comments ? `\n${this.formatMultilineValue(comments, indentation)}` : ""}${closingNewline}>\n`;
+    }
+
+    return `${tagIndentation}<${node.tagName}${attrs ? ` ${attrs}` : ""}${edgeMustaches ? ` ${edgeMustaches}` : ""}${edgeProps ? ` ${edgeProps}` : ""}${edgeTagProps ? ` ${this.formatMultilineValue(edgeTagProps, "")}` : ""}${comments ? ` ${this.formatMultilineValue(comments, "")}` : ""}>\n`;
+  }
+
+  private printClosingNode(node: ClosingTagNode) {
+    return `${this.getIndent(this.level - 1, "decrease")}</${node.tagName}>\n`;
+  }
+
+  private printEdgeTagNode(node: EdgeTagNode) {
+    let indentAdjustment: IndentAdjustment = "none";
+    let levelOverride = this.level;
+
+    if (node.value.includes("@end")) {
+      indentAdjustment = "decrease";
+      levelOverride--;
+    } else if (node.value.includes("@else")) {
+      levelOverride--;
+    } else if (
+      node.value.includes("@!") ||
+      node.value.includes("@let") ||
+      node.value.includes("@vite") ||
+      node.value.match(/^@include\(.*/)?.length ||
+      node.value.match(/^@includeIf\(.*/)?.length ||
+      !node.value.includes("(")
+    ) {
+      indentAdjustment = "none";
+    } else {
+      indentAdjustment = "increase";
+    }
+
+    return formatEdgeValue(
+      node,
+      this.getIndent(levelOverride, indentAdjustment)
+    );
+  }
+
+  private printHtmlTextNode(
+    node: HtmlTextNode,
+    previousNode?: ParserNode,
+    nextNode?: ParserNode
+  ) {
+    const useIndentation = !(
+      previousNode?.type === "edgeMustache" ||
+      previousNode?.type === "edgeSafeMustache" ||
+      previousNode?.type === "edgeEscapedMustache"
+    );
+
+    const useLineBreak = !(
+      nextNode?.type === "edgeMustache" ||
+      nextNode?.type === "edgeSafeMustache" ||
+      nextNode?.type === "edgeEscapedMustache" ||
+      nextNode?.type === "htmlText"
+    );
+
+    const skipTrailingWhitespace = /[.,:;!?+\-*/=<>()[\]{}"'@#$%^&*_]/g.test(
+      node.value
+    );
+
+    return `${this.formatMultilineValue(node.value, this.getIndent(), useIndentation).trimEnd()}${useLineBreak ? "\n" : skipTrailingWhitespace ? "" : " "}`;
+  }
+
+  private printLineBreak(
+    _node: LineBreakNode,
+    previousNode?: ParserNode,
+    nextNode?: ParserNode
+  ) {
+    if (
+      (previousNode?.type === "edgeMustache" ||
+        previousNode?.type === "edgeEscapedMustache" ||
+        previousNode?.type === "edgeSafeMustache" ||
+        previousNode?.type === "htmlText" ||
+        previousNode?.type === "linebreak") &&
+      (nextNode?.type === "edgeMustache" ||
+        nextNode?.type === "edgeEscapedMustache" ||
+        nextNode?.type === "edgeSafeMustache" ||
+        nextNode?.type === "htmlText")
+    ) {
+      return "\n";
+    }
+
+    return "";
+  }
+
   handlePrint(
     node: ParserNode,
     previousNode: ParserNode | undefined,
@@ -33,285 +306,37 @@ class Printer {
   ): string {
     switch (node.type) {
       case "document":
-        this.level = 0;
-        return node.children
-          .map((child: ParserNode, index) =>
-            this.handlePrint(
-              child,
-              node.children[index - 1],
-              node.children[index + 1]
-            )
-          )
-          .join("");
+        return this.printDocumentNode(node);
       case "dtd":
-        this.level = 0;
-        return `${this.getIndent()}${node.value}\n`;
+        return this.printDTDNode(node);
       case "htmlComment":
       case "htmlConditionalComment":
       case "cdata":
       case "scriptlet":
-        return `${this.getIndent()}${node.value.trim()}\n`;
+        return this.printStandardNode(node);
       case "scriptElement":
-        return `${formatJS(node, this.tabWidth, this.getIndent(), this.getIndent(this.level + 1))}\n`;
+        return this.printScriptElementNode(node);
       case "styleElement":
-        return `${formatCss(node, this.getIndent(), this.getIndent(this.level + 1), this.getIndent(1))}\n`;
+        return this.printStyleElementNode(node);
       case "edgeComment":
-        return `${this.getIndent()}${addEdgeCommentSpacing(node.value.trim())}\n`;
+        return this.printEdgeComment(node);
       case "edgeMustache":
       case "edgeEscapedMustache":
-        let useIndentation = true;
-        let useLineBreak = true;
-
-        if (
-          previousNode?.type === "htmlText" ||
-          previousNode?.type === "edgeMustache" ||
-          previousNode?.type === "edgeEscapedMustache"
-        ) {
-          useIndentation = false;
-        }
-
-        if (
-          nextNode?.type === "htmlText" ||
-          nextNode?.type === "edgeMustache" ||
-          nextNode?.type === "edgeEscapedMustache"
-        ) {
-          useLineBreak = false;
-        }
-
-        return `${useIndentation ? this.getIndent() : ""}${addEdgeMustacheSpacing(node.value)}${useLineBreak ? "\n" : " "}`;
       case "edgeSafeMustache":
-        return `${this.getIndent()}${addEdgeSafeMustacheSpacing(node.value.trim())}\n`;
+        return this.printEdgeMustacheNode(node, previousNode, nextNode);
       case "openingTag":
       case "voidTag":
-        let attrs = node.attributes
-          .map((attr) =>
-            attr.attributeValue
-              ? `${attr.attributeName}=${addEdgeMustacheSpacing(attr.attributeValue)}`
-              : attr.attributeName
-          )
-          .join(" ");
-
-        let edgeProps = node.edgeProps
-          .map((prop) => addEdgeMustacheSpacing(prop.value))
-          .join(" ");
-
-        let edgeTagProps = node.edgeTagProps
-          .map((prop) => prop.value)
-          .join(" ");
-
-        let edgeMustaches = node.edgeMustaches
-          .map((mustache) => addEdgeMustacheSpacing(mustache.value))
-          .join(" ");
-
-        let comments = node.comments.map((comment) => comment.value).join(" ");
-
-        const combinedLength =
-          `${attrs} ${edgeProps} ${edgeMustaches} ${edgeTagProps} ${comments}`
-            .length;
-        const indentation = this.getIndent(this.level + 1);
-        const tagIndentation = this.getIndent(
-          undefined,
-          node.type === "openingTag" ? "increase" : "none"
-        );
-        const closingIndentation = this.getIndent(
-          node.type === "openingTag" ? this.level - 1 : this.level
-        );
-
-        if (combinedLength > this.printWidth || this.singleAttributePerLine) {
-          attrs = node.attributes
-            .map((attr) =>
-              attr.attributeValue
-                ? `${indentation}${attr.attributeName}=${addEdgeMustacheSpacing(attr.attributeValue)}`
-                : `${indentation}${attr.attributeName}`
-            )
-            .join("\n");
-
-          edgeProps = node.edgeProps
-            .map(
-              (prop) => `${indentation}${addEdgeMustacheSpacing(prop.value)}`
-            )
-            .join("\n");
-
-          edgeTagProps = node.edgeTagProps
-            .map((prop) => `${indentation}${prop.value}`)
-            .join("\n");
-
-          edgeMustaches = node.edgeMustaches
-            .map(
-              (mustache) =>
-                `${indentation}${addEdgeMustacheSpacing(mustache.value)}`
-            )
-            .join("\n");
-
-          comments = node.comments
-            .map((comment) => `${indentation}${comment.value}`)
-            .join("\n");
-
-          const closingNewline =
-            combinedLength - 2 > 0 ? "\n" + closingIndentation : "";
-
-          return `${tagIndentation}<${node.tagName}${attrs ? "\n" + attrs : ""}${edgeMustaches ? "\n" + edgeMustaches : ""}${edgeProps ? "\n" + edgeProps : ""}${
-            edgeTagProps
-              ? "\n" +
-                edgeTagProps
-                  .split("\n")
-                  .map((value, index) => {
-                    if (
-                      index === 0 ||
-                      index === edgeTagProps.split("\n").length - 1
-                    ) {
-                      return `${indentation}${value.trim()}`;
-                    }
-
-                    const originalWhitespace = countLeadingSpaces(value);
-
-                    return `${" ".repeat(Math.max(indentation.length, originalWhitespace))}${value.trim()}`;
-                  })
-                  .join("\n")
-              : ""
-          }${
-            comments
-              ? "\n" +
-                comments
-                  .split("\n")
-                  .map((value, index) => {
-                    if (
-                      index === 0 ||
-                      index === comments.split("\n").length - 1
-                    ) {
-                      return `${indentation}${value.trim()}`;
-                    }
-
-                    const originalWhitespace = countLeadingSpaces(value);
-
-                    return `${" ".repeat(Math.max(indentation.length, originalWhitespace))}${value.trim()}`;
-                  })
-                  .join("\n")
-              : ""
-          }${closingNewline}>\n`;
-        }
-
-        return `${tagIndentation}<${node.tagName}${printAttribute(attrs)}${printAttribute(edgeMustaches)}${printAttribute(edgeProps)}${printAttribute(
-          edgeTagProps
-            .split("\n")
-            .map((value, index) => {
-              if (
-                index === 0 ||
-                index === edgeTagProps.split("\n").length - 1
-              ) {
-                return `${value}`;
-              }
-
-              const originalWhitespace = countLeadingSpaces(value);
-
-              return `${" ".repeat(Math.max(indentation.length, originalWhitespace))}${value.trim()}`;
-            })
-            .join("\n")
-        )}${printAttribute(
-          comments
-            .split("\n")
-            .map((value, index) => {
-              if (index === 0 || index === comments.split("\n").length - 1) {
-                return `${value}`;
-              }
-
-              const originalWhitespace = countLeadingSpaces(value);
-
-              return `${" ".repeat(Math.max(indentation.length, originalWhitespace))}${value.trim()}`;
-            })
-            .join("\n")
-        )}>\n`;
+        return this.printOpeningNode(node);
       case "closingTag":
-        return `${this.getIndent(this.level - 1, "decrease")}</${node.tagName}>\n`;
+        return this.printClosingNode(node);
       case "edgeTag":
-        const nodeValue = node.value;
-        let indentAdjustment: IndentAdjustment = "none";
-        let levelOverride = this.level;
-
-        if (nodeValue.includes("@end")) {
-          indentAdjustment = "decrease";
-          levelOverride--;
-        } else if (nodeValue.includes("@else")) {
-          levelOverride--;
-        } else if (
-          nodeValue.includes("@!") ||
-          nodeValue.includes("@let") ||
-          nodeValue.includes("@vite") ||
-          nodeValue.match(/^@include\(.*/)?.length ||
-          nodeValue.match(/^@includeIf\(.*/)?.length ||
-          !nodeValue.includes("(")
-        ) {
-          indentAdjustment = "none";
-        } else {
-          indentAdjustment = "increase";
-        }
-
-        return formatEdgeValue(
-          node,
-          this.getIndent(levelOverride, indentAdjustment)
-        );
+        return this.printEdgeTagNode(node);
       case "htmlText":
-        let useIndentation2 = true;
-        let useLineBreak2 = true;
-
-        if (
-          previousNode?.type === "edgeMustache" ||
-          previousNode?.type === "edgeSafeMustache"
-        ) {
-          useIndentation2 = false;
-        }
-
-        if (
-          nextNode?.type === "edgeMustache" ||
-          nextNode?.type === "edgeSafeMustache" ||
-          nextNode?.type === "htmlText"
-        ) {
-          useLineBreak2 = false;
-        }
-
-        return `${node.value
-          .split("\n")
-          .map((value, index) => {
-            if (index === 0) {
-              return `${useIndentation2 ? this.getIndent() : ""}${value}`;
-            }
-
-            return `${this.getIndent()}${value.trim()}`;
-          })
-          .join("\n")
-          .trimEnd()}${useLineBreak2 ? "\n" : " "}`;
-
+        return this.printHtmlTextNode(node, previousNode, nextNode);
+      case "linebreak":
+        return this.printLineBreak(node, previousNode, nextNode);
       default:
         return "";
-    }
-  }
-
-  private getIndent(
-    levelOverride?: number,
-    indentAdjustment: IndentAdjustment = "none"
-  ) {
-    const value = `${this.useTabs ? "\t" : " "}`.repeat(
-      this.tabWidth *
-        (levelOverride !== undefined && levelOverride <= 0
-          ? 0
-          : levelOverride || this.level)
-    );
-
-    this.handleIndentAdjustment(indentAdjustment);
-
-    return value;
-  }
-
-  private handleIndentAdjustment(indentAdjustment: IndentAdjustment = "none") {
-    switch (indentAdjustment) {
-      case "increase":
-        this.level++;
-        break;
-      case "decrease":
-        this.level--;
-        break;
-      default:
-        break;
     }
   }
 }

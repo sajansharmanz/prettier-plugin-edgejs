@@ -2,10 +2,6 @@ import css from "css";
 import uglifyjs from "uglify-js";
 import { EdgeTagNode, ScriptElementNode, StyleElementNode } from "./types";
 
-export function printAttribute(attr: string): string {
-  return `${attr ? " " + attr : ""}`;
-}
-
 export function addEdgeCommentSpacing(value: string): string {
   if (!value.includes("{{--\n")) {
     value.replace(/{{--/g, "{{-- ");

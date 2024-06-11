@@ -14,6 +14,11 @@ export interface HtmlTextNode extends BaseNode {
   value: string;
 }
 
+export interface LineBreakNode extends BaseNode {
+  type: "linebreak";
+  value: string;
+}
+
 export interface OpeningTagNode extends BaseNode {
   type: "openingTag";
   tagName: string;
@@ -118,6 +123,7 @@ export interface AttributeNode extends BaseNode {
 export type ParserNode =
   | DocumentNode
   | HtmlTextNode
+  | LineBreakNode
   | OpeningTagNode
   | VoidTagNode
   | ClosingTagNode
