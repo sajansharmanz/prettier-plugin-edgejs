@@ -236,6 +236,7 @@ class Printer {
     } else if (
       node.value.includes("@!") ||
       node.value.includes("@let") ||
+      node.value.includes("@assign") ||
       node.value.includes("@vite") ||
       node.value.match(/^@include\(.*/)?.length ||
       node.value.match(/^@includeIf\(.*/)?.length ||

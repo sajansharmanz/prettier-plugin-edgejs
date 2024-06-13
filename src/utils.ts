@@ -100,7 +100,6 @@ export function formatEdgeValue(node: EdgeTagNode, indent: string) {
       }
 
       const originalWhitespace = countLeadingSpaces(value);
-
       return `${" ".repeat(Math.max(indent.length, originalWhitespace))}${value.trim()}`;
     })
     .join("\n")
