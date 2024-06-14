@@ -158,14 +158,17 @@ class Printer {
       previousNode?.type === "htmlText" ||
       previousNode?.type === "edgeMustache" ||
       previousNode?.type === "edgeEscapedMustache" ||
-      previousNode?.type === "edgeSafeMustache"
+      previousNode?.type === "edgeSafeMustache" ||
+      (previousNode?.type === "openingTag" &&
+        previousNode.tagName === "textarea")
     );
 
     const useLineBreak = !(
       nextNode?.type === "htmlText" ||
       nextNode?.type === "edgeMustache" ||
       nextNode?.type === "edgeEscapedMustache" ||
-      nextNode?.type === "edgeSafeMustache"
+      nextNode?.type === "edgeSafeMustache" ||
+      (nextNode?.type === "closingTag" && nextNode.tagName === "textarea")
     );
 
     let result = `${useIndentation ? this.getIndent() : ""}`;
@@ -214,14 +217,16 @@ class Printer {
         edgeTagProps
           ? `\n${this.formatMultilineValue(edgeTagProps, indentation)}`
           : ""
-      }${comments ? `\n${this.formatMultilineValue(comments, indentation)}` : ""}${closingNewline}>\n`;
+      }${comments ? `\n${this.formatMultilineValue(comments, indentation)}` : ""}${closingNewline}>${node.tagName === "textarea" ? "" : "\n"}`;
     }
 
-    return `${tagIndentation}<${node.tagName}${attrs ? ` ${attrs}` : ""}${edgeMustaches ? ` ${edgeMustaches}` : ""}${edgeProps ? ` ${edgeProps}` : ""}${edgeTagProps ? ` ${this.formatMultilineValue(edgeTagProps, "")}` : ""}${comments ? ` ${this.formatMultilineValue(comments, "")}` : ""}>\n`;
+    return `${tagIndentation}<${node.tagName}${attrs ? ` ${attrs}` : ""}${edgeMustaches ? ` ${edgeMustaches}` : ""}${edgeProps ? ` ${edgeProps}` : ""}${edgeTagProps ? ` ${this.formatMultilineValue(edgeTagProps, "")}` : ""}${comments ? ` ${this.formatMultilineValue(comments, "")}` : ""}>${node.tagName === "textarea" ? "" : "\n"}`;
   }
 
   private printClosingNode(node: ClosingTagNode) {
-    return `${this.getIndent(this.level - 1, "decrease")}</${node.tagName}>\n`;
+    const useIndentation = !(node.tagName === "textarea");
+
+    return `${useIndentation ? this.getIndent(this.level - 1, "decrease") : this.getIndent(0, "decrease")}</${node.tagName}>\n`;
   }
 
   private printEdgeTagNode(node: EdgeTagNode) {
@@ -261,7 +266,9 @@ class Printer {
     const useIndentation = !(
       previousNode?.type === "edgeMustache" ||
       previousNode?.type === "edgeSafeMustache" ||
-      previousNode?.type === "edgeEscapedMustache"
+      previousNode?.type === "edgeEscapedMustache" ||
+      (previousNode?.type === "openingTag" &&
+        previousNode.tagName === "textarea")
     );
 
     const useLineBreak = !(
