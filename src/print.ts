@@ -87,8 +87,8 @@ class Printer {
     return attributes
       .map((attr) =>
         attr.attributeValue
-          ? `${indent}${attr.attributeName}=${addEdgeMustacheSpacing(attr.attributeValue)}`
-          : `${indent}${attr.attributeName}`
+          ? `${indent}${attr.attributeName}=${addEdgeMustacheSpacing(attr.attributeValue).trim()}`
+          : `${indent}${attr.attributeName.trim()}`
       )
       .join(indent ? "\n" : " ");
   }
@@ -98,13 +98,13 @@ class Printer {
     indent = ""
   ) {
     return props
-      .map((prop) => `${indent}${addEdgeMustacheSpacing(prop.value)}`)
+      .map((prop) => `${indent}${addEdgeMustacheSpacing(prop.value).trim()}`)
       .join(indent ? "\n" : " ");
   }
 
   private formatEdgeTagProps(props: EdgeTagPropsNode[], indent = "") {
     return props
-      .map((prop) => `${indent}${prop.value}`)
+      .map((prop) => `${indent}${prop.value.trim()}`)
       .join(indent ? "\n" : " ");
   }
 
