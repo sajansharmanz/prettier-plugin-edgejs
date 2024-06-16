@@ -40,6 +40,46 @@ class Printer {
   private printWidth: number;
   private tabWidth: number;
   private singleAttributePerLine: boolean;
+  private inlineTags = new Set([
+    "a",
+    "abbr",
+    "acronym",
+    "b",
+    "bdi",
+    "bdo",
+    "big",
+    "br",
+    "button",
+    "cite",
+    "code",
+    "data",
+    "dfn",
+    "em",
+    "i",
+    "img",
+    "input",
+    "kbd",
+    "label",
+    "mark",
+    "meter",
+    "q",
+    "ruby",
+    "rp",
+    "rt",
+    "s",
+    "samp",
+    "select",
+    "small",
+    "span",
+    "strong",
+    "sub",
+    "sup",
+    "textarea",
+    "time",
+    "u",
+    "var",
+    "wbr",
+  ]);
 
   constructor(options: ParserOptions) {
     this.level = 0;
@@ -47,6 +87,10 @@ class Printer {
     this.printWidth = options.printWidth ?? 80;
     this.tabWidth = options.tabWidth ?? 4;
     this.singleAttributePerLine = options.singleAttributePerLine ?? false;
+  }
+
+  private isInlineTag(tagName: string): boolean {
+    return this.inlineTags.has(tagName);
   }
 
   private getIndent(
@@ -134,7 +178,9 @@ class Printer {
       | CdataNode
       | ScriptletNode
   ) {
-    return `${this.formatMultilineValue(node.value, this.getIndent())}\n`;
+    const isScriptlet = node.type === "scriptlet";
+
+    return `${this.formatMultilineValue(node.value, isScriptlet ? "" : this.getIndent())}${isScriptlet ? "" : "\n"}`;
   }
 
   private printScriptElementNode(node: ScriptElementNode) {
@@ -159,8 +205,10 @@ class Printer {
       previousNode?.type === "edgeMustache" ||
       previousNode?.type === "edgeEscapedMustache" ||
       previousNode?.type === "edgeSafeMustache" ||
-      (previousNode?.type === "openingTag" &&
-        previousNode.tagName === "textarea")
+      ((previousNode?.type === "openingTag" ||
+        previousNode?.type === "voidTag" ||
+        previousNode?.type === "closingTag") &&
+        this.isInlineTag(previousNode.tagName))
     );
 
     const useLineBreak = !(
@@ -168,7 +216,10 @@ class Printer {
       nextNode?.type === "edgeMustache" ||
       nextNode?.type === "edgeEscapedMustache" ||
       nextNode?.type === "edgeSafeMustache" ||
-      (nextNode?.type === "closingTag" && nextNode.tagName === "textarea")
+      ((nextNode?.type === "openingTag" ||
+        nextNode?.type === "voidTag" ||
+        nextNode?.type === "closingTag") &&
+        this.isInlineTag(nextNode.tagName))
     );
 
     let result = `${useIndentation ? this.getIndent() : ""}`;
@@ -184,7 +235,11 @@ class Printer {
     return result;
   }
 
-  private printOpeningNode(node: OpeningTagNode | VoidTagNode) {
+  private printOpeningNode(
+    node: OpeningTagNode | VoidTagNode,
+    previousNode: ParserNode | undefined,
+    nextNode: ParserNode | undefined
+  ) {
     let attrs = this.formatAttributes(node.attributes);
     let edgeProps = this.formatEdgeProps(node.edgeProps);
     let edgeTagProps = this.formatEdgeTagProps(node.edgeTagProps);
@@ -202,7 +257,21 @@ class Printer {
     const closingIndentation = this.getIndent(
       node.type === "openingTag" ? this.level - 1 : this.level
     );
+    const useLineBreak = !(
+      (nextNode?.type === "htmlText" ||
+        nextNode?.type === "edgeMustache" ||
+        nextNode?.type === "edgeEscapedMustache" ||
+        nextNode?.type === "edgeSafeMustache") &&
+      this.isInlineTag(node.tagName)
+    );
 
+    const useIndentation = !(
+      (previousNode?.type === "htmlText" ||
+        previousNode?.type === "edgeMustache" ||
+        previousNode?.type === "edgeEscapedMustache" ||
+        previousNode?.type === "edgeSafeMustache") &&
+      this.isInlineTag(node.tagName)
+    );
     if (combinedLength > this.printWidth || this.singleAttributePerLine) {
       attrs = this.formatAttributes(node.attributes, indentation);
       edgeProps = this.formatEdgeProps(node.edgeProps, indentation);
@@ -213,20 +282,38 @@ class Printer {
       const closingNewline =
         combinedLength - 2 > 0 ? `\n${closingIndentation}` : "";
 
-      return `${tagIndentation}<${node.tagName}${attrs ? `\n${attrs}` : ""}${edgeMustaches ? `\n${edgeMustaches}` : ""}${edgeProps ? `\n${edgeProps}` : ""}${
+      return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? `\n${attrs}` : ""}${edgeMustaches ? `\n${edgeMustaches}` : ""}${edgeProps ? `\n${edgeProps}` : ""}${
         edgeTagProps
           ? `\n${this.formatMultilineValue(edgeTagProps, indentation)}`
           : ""
-      }${comments ? `\n${this.formatMultilineValue(comments, indentation)}` : ""}${closingNewline}>${node.tagName === "textarea" ? "" : "\n"}`;
+      }${comments ? `\n${this.formatMultilineValue(comments, indentation)}` : ""}${closingNewline}>${useLineBreak ? "\n" : ""}`;
     }
 
-    return `${tagIndentation}<${node.tagName}${attrs ? ` ${attrs}` : ""}${edgeMustaches ? ` ${edgeMustaches}` : ""}${edgeProps ? ` ${edgeProps}` : ""}${edgeTagProps ? ` ${this.formatMultilineValue(edgeTagProps, "")}` : ""}${comments ? ` ${this.formatMultilineValue(comments, "")}` : ""}>${node.tagName === "textarea" ? "" : "\n"}`;
+    return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? ` ${attrs}` : ""}${edgeMustaches ? ` ${edgeMustaches}` : ""}${edgeProps ? ` ${edgeProps}` : ""}${edgeTagProps ? ` ${this.formatMultilineValue(edgeTagProps, "")}` : ""}${comments ? ` ${this.formatMultilineValue(comments, "")}` : ""}>${useLineBreak ? "\n" : ""}`;
   }
 
-  private printClosingNode(node: ClosingTagNode) {
-    const useIndentation = !(node.tagName === "textarea");
+  private printClosingNode(
+    node: ClosingTagNode,
+    previousNode: ParserNode | undefined,
+    nextNode: ParserNode | undefined
+  ) {
+    const useIndentation =
+      !this.isInlineTag(node.tagName) || previousNode?.type === "linebreak";
 
-    return `${useIndentation ? this.getIndent(this.level - 1, "decrease") : this.getIndent(0, "decrease")}</${node.tagName}>\n`;
+    const useLineBreak =
+      !(
+        (previousNode?.type === "htmlText" ||
+          previousNode?.type === "edgeMustache" ||
+          previousNode?.type === "edgeEscapedMustache" ||
+          previousNode?.type === "edgeSafeMustache") &&
+        this.isInlineTag(node.tagName)
+      ) ||
+      nextNode?.type === "closingTag" ||
+      nextNode?.type === "linebreak";
+
+    console.log(`${node.tagName}:${useIndentation}:${this.level}`);
+
+    return `${useIndentation ? this.getIndent(this.level - 1, "decrease") : this.getIndent(0, "decrease")}</${node.tagName}>${useLineBreak ? "\n" : ""}`;
   }
 
   private printEdgeTagNode(node: EdgeTagNode) {
@@ -264,25 +351,33 @@ class Printer {
     nextNode?: ParserNode
   ) {
     const useIndentation = !(
+      previousNode?.type === "scriptlet" ||
       previousNode?.type === "edgeMustache" ||
       previousNode?.type === "edgeSafeMustache" ||
       previousNode?.type === "edgeEscapedMustache" ||
-      (previousNode?.type === "openingTag" &&
-        previousNode.tagName === "textarea")
+      ((previousNode?.type === "openingTag" ||
+        previousNode?.type === "voidTag" ||
+        previousNode?.type === "closingTag") &&
+        this.isInlineTag(previousNode.tagName))
     );
 
     const useLineBreak = !(
       nextNode?.type === "edgeMustache" ||
       nextNode?.type === "edgeSafeMustache" ||
       nextNode?.type === "edgeEscapedMustache" ||
-      nextNode?.type === "htmlText"
+      nextNode?.type === "htmlText" ||
+      ((nextNode?.type === "openingTag" ||
+        nextNode?.type === "voidTag" ||
+        nextNode?.type === "closingTag") &&
+        this.isInlineTag(nextNode.tagName)) ||
+      nextNode?.type === "scriptlet"
     );
 
-    const skipTrailingWhitespace = /[.,:;!?+\-*/=<>()[\]{}"'@#$%^&*_]/g.test(
-      node.value
-    );
+    const indentedValue = useIndentation
+      ? this.getIndent() + node.value
+      : node.value;
 
-    return `${this.formatMultilineValue(node.value, this.getIndent(), useIndentation).trimEnd()}${useLineBreak ? "\n" : skipTrailingWhitespace ? "" : " "}`;
+    return useLineBreak ? `${indentedValue.trimEnd()}\n` : indentedValue;
   }
 
   private printLineBreak(
@@ -290,16 +385,38 @@ class Printer {
     previousNode?: ParserNode,
     nextNode?: ParserNode
   ) {
+    const isPreviousNodeInline =
+      (previousNode?.type === "openingTag" ||
+        previousNode?.type === "voidTag" ||
+        previousNode?.type === "closingTag") &&
+      this.isInlineTag(previousNode.tagName);
+
+    const isNextNodeInline =
+      (nextNode?.type === "openingTag" ||
+        nextNode?.type === "voidTag" ||
+        nextNode?.type === "closingTag") &&
+      this.isInlineTag(nextNode.tagName);
+
+    const isPreviousNodeEdgeOrText =
+      previousNode?.type === "edgeMustache" ||
+      previousNode?.type === "edgeEscapedMustache" ||
+      previousNode?.type === "edgeSafeMustache" ||
+      previousNode?.type === "htmlText" ||
+      previousNode?.type === "linebreak";
+
+    const isNextNodeEdgeOrText =
+      previousNode?.type === "edgeMustache" ||
+      previousNode?.type === "edgeEscapedMustache" ||
+      previousNode?.type === "edgeSafeMustache" ||
+      previousNode?.type === "htmlText";
+
+    if (isPreviousNodeInline) {
+      return "";
+    }
+
     if (
-      (previousNode?.type === "edgeMustache" ||
-        previousNode?.type === "edgeEscapedMustache" ||
-        previousNode?.type === "edgeSafeMustache" ||
-        previousNode?.type === "htmlText" ||
-        previousNode?.type === "linebreak") &&
-      (nextNode?.type === "edgeMustache" ||
-        nextNode?.type === "edgeEscapedMustache" ||
-        nextNode?.type === "edgeSafeMustache" ||
-        nextNode?.type === "htmlText")
+      isPreviousNodeEdgeOrText &&
+      (isNextNodeInline || isNextNodeEdgeOrText)
     ) {
       return "\n";
     }
@@ -334,9 +451,9 @@ class Printer {
         return this.printEdgeMustacheNode(node, previousNode, nextNode);
       case "openingTag":
       case "voidTag":
-        return this.printOpeningNode(node);
+        return this.printOpeningNode(node, previousNode, nextNode);
       case "closingTag":
-        return this.printClosingNode(node);
+        return this.printClosingNode(node, previousNode, nextNode);
       case "edgeTag":
         return this.printEdgeTagNode(node);
       case "htmlText":
