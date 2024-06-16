@@ -298,7 +298,9 @@ class Printer {
     nextNode: ParserNode | undefined
   ) {
     const useIndentation =
-      !this.isInlineTag(node.tagName) || previousNode?.type === "linebreak";
+      !this.isInlineTag(node.tagName) ||
+      previousNode?.type === "linebreak" ||
+      previousNode?.type === "edgeTag";
 
     const useLineBreak =
       !(
@@ -310,8 +312,6 @@ class Printer {
       ) ||
       nextNode?.type === "closingTag" ||
       nextNode?.type === "linebreak";
-
-    console.log(`${node.tagName}:${useIndentation}:${this.level}`);
 
     return `${useIndentation ? this.getIndent(this.level - 1, "decrease") : this.getIndent(0, "decrease")}</${node.tagName}>${useLineBreak ? "\n" : ""}`;
   }
