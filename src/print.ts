@@ -29,6 +29,7 @@ import {
   addEdgeMustacheSpacing,
   addEdgeSafeMustacheSpacing,
   countLeadingSpaces,
+  filterLineBreaks,
   formatCss,
   formatEdgeValue,
   formatJS,
@@ -161,6 +162,7 @@ class Printer {
   private printDocumentNode(node: DocumentNode) {
     this.level = 0;
     return node.children
+      .filter(filterLineBreaks)
       .map((child, index, array) =>
         this.handlePrint(child, array[index - 1], array[index + 1])
       )
@@ -168,7 +170,7 @@ class Printer {
   }
 
   private printDTDNode(node: DtdNode) {
-    return `${this.getIndent()}${node.value}\n`;
+    return `${this.getIndent()}${node.value}`;
   }
 
   private printStandardNode(
@@ -180,19 +182,19 @@ class Printer {
   ) {
     const isScriptlet = node.type === "scriptlet";
 
-    return `${this.formatMultilineValue(node.value, isScriptlet ? "" : this.getIndent())}${isScriptlet ? "" : "\n"}`;
+    return `${this.formatMultilineValue(node.value, isScriptlet ? "" : this.getIndent())}`;
   }
 
   private printScriptElementNode(node: ScriptElementNode) {
-    return `${formatJS(node, this.tabWidth, this.getIndent(), this.getIndent(this.level + 1))}\n`;
+    return `${formatJS(node, this.tabWidth, this.getIndent(), this.getIndent(this.level + 1))}`;
   }
 
   private printStyleElementNode(node: StyleElementNode) {
-    return `${formatCss(node, this.getIndent(), this.getIndent(this.level + 1), this.getIndent(1))}\n`;
+    return `${formatCss(node, this.getIndent(), this.getIndent(this.level + 1), this.getIndent(1))}`;
   }
 
   private printEdgeComment(node: EdgeCommentNode) {
-    return `${this.formatMultilineValue(addEdgeCommentSpacing(node.value.trim()), this.getIndent())}\n`;
+    return `${this.formatMultilineValue(addEdgeCommentSpacing(node.value.trim()), this.getIndent())}`;
   }
 
   private printEdgeMustacheNode(
@@ -229,8 +231,7 @@ class Printer {
         ? addEdgeSafeMustacheSpacing(node.value)
         : addEdgeMustacheSpacing(node.value);
 
-    result += useLineBreak ? nodeValue.trimEnd() : nodeValue;
-    result += useLineBreak ? "\n" : "";
+    result += useLineBreak ? nodeValue.replace(/[^\S\r\n]+$/g, "") : nodeValue;
 
     return result;
   }
@@ -257,13 +258,9 @@ class Printer {
     const closingIndentation = this.getIndent(
       node.type === "openingTag" ? this.level - 1 : this.level
     );
-    const useLineBreak = !(
-      (nextNode?.type === "htmlText" ||
-        nextNode?.type === "edgeMustache" ||
-        nextNode?.type === "edgeEscapedMustache" ||
-        nextNode?.type === "edgeSafeMustache") &&
-      this.isInlineTag(node.tagName)
-    );
+
+    const useLineBreak =
+      !this.isInlineTag(node.tagName) && nextNode?.type !== "linebreak";
 
     const useIndentation = !(
       (previousNode?.type === "htmlText" ||
@@ -294,26 +291,14 @@ class Printer {
 
   private printClosingNode(
     node: ClosingTagNode,
-    previousNode: ParserNode | undefined,
-    nextNode: ParserNode | undefined
+    previousNode: ParserNode | undefined
   ) {
     const useIndentation =
       !this.isInlineTag(node.tagName) ||
       previousNode?.type === "linebreak" ||
       previousNode?.type === "edgeTag";
 
-    const useLineBreak =
-      !(
-        (previousNode?.type === "htmlText" ||
-          previousNode?.type === "edgeMustache" ||
-          previousNode?.type === "edgeEscapedMustache" ||
-          previousNode?.type === "edgeSafeMustache") &&
-        this.isInlineTag(node.tagName)
-      ) ||
-      nextNode?.type === "closingTag" ||
-      nextNode?.type === "linebreak";
-
-    return `${useIndentation ? this.getIndent(this.level - 1, "decrease") : this.getIndent(0, "decrease")}</${node.tagName}>${useLineBreak ? "\n" : ""}`;
+    return `${useIndentation ? this.getIndent(this.level - 1, "decrease") : this.getIndent(0, "decrease")}</${node.tagName}>`;
   }
 
   private printEdgeTagNode(node: EdgeTagNode) {
@@ -381,48 +366,8 @@ class Printer {
     return useLineBreak ? `${indentedValue.trimEnd()}\n` : indentedValue;
   }
 
-  private printLineBreak(
-    _node: LineBreakNode,
-    previousNode?: ParserNode,
-    nextNode?: ParserNode
-  ) {
-    const isPreviousNodeInline =
-      (previousNode?.type === "openingTag" ||
-        previousNode?.type === "voidTag" ||
-        previousNode?.type === "closingTag") &&
-      this.isInlineTag(previousNode.tagName);
-
-    const isNextNodeInline =
-      (nextNode?.type === "openingTag" ||
-        nextNode?.type === "voidTag" ||
-        nextNode?.type === "closingTag") &&
-      this.isInlineTag(nextNode.tagName);
-
-    const isPreviousNodeEdgeOrText =
-      previousNode?.type === "edgeMustache" ||
-      previousNode?.type === "edgeEscapedMustache" ||
-      previousNode?.type === "edgeSafeMustache" ||
-      previousNode?.type === "htmlText" ||
-      previousNode?.type === "linebreak";
-
-    const isNextNodeEdgeOrText =
-      previousNode?.type === "edgeMustache" ||
-      previousNode?.type === "edgeEscapedMustache" ||
-      previousNode?.type === "edgeSafeMustache" ||
-      previousNode?.type === "htmlText";
-
-    if (isPreviousNodeInline) {
-      return "";
-    }
-
-    if (
-      isPreviousNodeEdgeOrText &&
-      (isNextNodeInline || isNextNodeEdgeOrText)
-    ) {
-      return "\n";
-    }
-
-    return "";
+  private printLineBreak(node: LineBreakNode) {
+    return node.value;
   }
 
   handlePrint(
@@ -454,13 +399,13 @@ class Printer {
       case "voidTag":
         return this.printOpeningNode(node, previousNode, nextNode);
       case "closingTag":
-        return this.printClosingNode(node, previousNode, nextNode);
+        return this.printClosingNode(node, previousNode);
       case "edgeTag":
         return this.printEdgeTagNode(node);
       case "htmlText":
         return this.printHtmlTextNode(node, previousNode, nextNode);
       case "linebreak":
-        return this.printLineBreak(node, previousNode, nextNode);
+        return this.printLineBreak(node);
       default:
         return "";
     }

@@ -1,6 +1,24 @@
 import css from "css";
 import uglifyjs from "uglify-js";
-import { EdgeTagNode, ScriptElementNode, StyleElementNode } from "./types";
+import {
+  EdgeTagNode,
+  ParserNode,
+  ScriptElementNode,
+  StyleElementNode,
+} from "./types";
+
+const MAX_CONSECUTIVE_LINE_BREAKS = 2;
+let consecutiveCount = 0;
+
+export function filterLineBreaks(node: ParserNode) {
+  if (node.type !== "linebreak") {
+    consecutiveCount = 0;
+    return true;
+  }
+
+  consecutiveCount++;
+  return consecutiveCount <= MAX_CONSECUTIVE_LINE_BREAKS;
+}
 
 export function addEdgeCommentSpacing(value: string): string {
   if (!value.includes("{{--\n")) {
@@ -103,5 +121,5 @@ export function formatEdgeValue(node: EdgeTagNode, indent: string) {
       return `${" ".repeat(Math.max(indent.length, originalWhitespace))}${value.trim()}`;
     })
     .join("\n")
-    .trim()}\n`;
+    .replace(/[^\S\r\n]+$/g, "")}`;
 }

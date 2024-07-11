@@ -39,8 +39,8 @@ If you spot an issue, feel free to open a Bug and I will get too it when I can, 
 
 If the printWidth is exceeded for any HTML tag, the plugin will default to having a single attribute per line to improve readability.
 
-Opening tags, tag content and closing tags will always be on separate lines as it improves readability.
+For block level elements opening tags, tag content and closing tags will always be on separate lines.
 
-For @let tags, your formatting is respected. Only the opening @let and the bracket will be formatted otherwise.
+For @let, @assign, @vite, @include, html text and comments tags, your formatting is respected.
 
 The plugin will not format your attribute values for spacing, etc. There are too many combinations to make it feasible to support this accurately.
