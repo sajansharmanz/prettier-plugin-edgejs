@@ -247,8 +247,6 @@ class Printer {
     let edgeMustaches = this.formatEdgeProps(node.edgeMustaches);
     let comments = this.formatComments(node.comments);
 
-    const closingTag = node.type == "voidTag" ? " />" : ">";
-
     const combinedLength =
       `${attrs} ${edgeProps} ${edgeMustaches} ${edgeTagProps} ${comments}`
         .length;
@@ -273,6 +271,7 @@ class Printer {
     );
 
     if (combinedLength > this.printWidth || this.singleAttributePerLine) {
+      const closingTag = node.type == "voidTag" ? "/>" : ">";
       attrs = this.formatAttributes(node.attributes, indentation);
       edgeProps = this.formatEdgeProps(node.edgeProps, indentation);
       edgeTagProps = this.formatEdgeTagProps(node.edgeTagProps, indentation);
@@ -289,6 +288,7 @@ class Printer {
       }${comments ? `\n${this.formatMultilineValue(comments, indentation)}` : ""}${closingNewline}${closingTag}${useLineBreak ? "\n" : ""}`;
     }
 
+    const closingTag = node.type == "voidTag" ? " />" : ">";
     return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? ` ${attrs}` : ""}${edgeMustaches ? ` ${edgeMustaches}` : ""}${edgeProps ? ` ${edgeProps}` : ""}${edgeTagProps ? ` ${this.formatMultilineValue(edgeTagProps, "")}` : ""}${comments ? ` ${this.formatMultilineValue(comments, "")}` : ""}${closingTag}${useLineBreak ? "\n" : ""}`;
   }
 
