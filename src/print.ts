@@ -258,7 +258,6 @@ class Printer {
     const closingIndentation = this.getIndent(
       node.type === "openingTag" ? this.level - 1 : this.level
     );
-    const closingTag = node.type == 'voidTag' ? ' />' : '>'
 
     const useLineBreak =
       !this.isInlineTag(node.tagName) && nextNode?.type !== "linebreak";
@@ -272,6 +271,7 @@ class Printer {
     );
 
     if (combinedLength > this.printWidth || this.singleAttributePerLine) {
+      const closingTag = node.type == 'voidTag' ? '/>' : '>'
       attrs = this.formatAttributes(node.attributes, indentation);
       edgeProps = this.formatEdgeProps(node.edgeProps, indentation);
       edgeTagProps = this.formatEdgeTagProps(node.edgeTagProps, indentation);
@@ -288,6 +288,7 @@ class Printer {
       }${comments ? `\n${this.formatMultilineValue(comments, indentation)}` : ""}${closingNewline}${closingTag}${useLineBreak ? "\n" : ""}`;
     }
 
+    const closingTag = node.type == 'voidTag' ? ' />' : '>'
     return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? ` ${attrs}` : ""}${edgeMustaches ? ` ${edgeMustaches}` : ""}${edgeProps ? ` ${edgeProps}` : ""}${edgeTagProps ? ` ${this.formatMultilineValue(edgeTagProps, "")}` : ""}${comments ? ` ${this.formatMultilineValue(comments, "")}` : ""}${closingTag}${useLineBreak ? "\n" : ""}`;
   }
 
