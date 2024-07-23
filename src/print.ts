@@ -258,6 +258,7 @@ class Printer {
     const closingIndentation = this.getIndent(
       node.type === "openingTag" ? this.level - 1 : this.level
     );
+    const closingTag = node.type == 'voidTag' ? ' />' : '>'
 
     const useLineBreak =
       !this.isInlineTag(node.tagName) && nextNode?.type !== "linebreak";
@@ -269,6 +270,7 @@ class Printer {
         previousNode?.type === "edgeSafeMustache") &&
       this.isInlineTag(node.tagName)
     );
+
     if (combinedLength > this.printWidth || this.singleAttributePerLine) {
       attrs = this.formatAttributes(node.attributes, indentation);
       edgeProps = this.formatEdgeProps(node.edgeProps, indentation);
@@ -283,10 +285,10 @@ class Printer {
         edgeTagProps
           ? `\n${this.formatMultilineValue(edgeTagProps, indentation)}`
           : ""
-      }${comments ? `\n${this.formatMultilineValue(comments, indentation)}` : ""}${closingNewline}>${useLineBreak ? "\n" : ""}`;
+      }${comments ? `\n${this.formatMultilineValue(comments, indentation)}` : ""}${closingNewline}${closingTag}${useLineBreak ? "\n" : ""}`;
     }
 
-    return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? ` ${attrs}` : ""}${edgeMustaches ? ` ${edgeMustaches}` : ""}${edgeProps ? ` ${edgeProps}` : ""}${edgeTagProps ? ` ${this.formatMultilineValue(edgeTagProps, "")}` : ""}${comments ? ` ${this.formatMultilineValue(comments, "")}` : ""}>${useLineBreak ? "\n" : ""}`;
+    return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? ` ${attrs}` : ""}${edgeMustaches ? ` ${edgeMustaches}` : ""}${edgeProps ? ` ${edgeProps}` : ""}${edgeTagProps ? ` ${this.formatMultilineValue(edgeTagProps, "")}` : ""}${comments ? ` ${this.formatMultilineValue(comments, "")}` : ""}${closingTag}${useLineBreak ? "\n" : ""}`;
   }
 
   private printClosingNode(
@@ -315,6 +317,8 @@ class Printer {
       node.value.includes("@let") ||
       node.value.includes("@svg") ||
       node.value.includes("@assign") ||
+      node.value.includes("@inject") ||
+      node.value.includes("@eval") ||
       node.value.includes("@vite") ||
       node.value.match(/^@include\(.*/)?.length ||
       node.value.match(/^@includeIf\(.*/)?.length ||
