@@ -320,6 +320,8 @@ class Printer {
       node.value.includes("@assign") ||
       node.value.includes("@inject") ||
       node.value.includes("@eval") ||
+      node.value.includes("@debugger") ||
+      node.value.includes("@newError") ||
       node.value.includes("@vite") ||
       node.value.match(/^@include\(.*/)?.length ||
       node.value.match(/^@includeIf\(.*/)?.length ||
