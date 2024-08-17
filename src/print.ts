@@ -231,7 +231,9 @@ class Printer {
         ? addEdgeSafeMustacheSpacing(node.value)
         : addEdgeMustacheSpacing(node.value);
 
-    result += useLineBreak ? nodeValue.replace(/[^\S\r\n]+$/g, "") : nodeValue;
+    result += useLineBreak
+      ? nodeValue.replace(/[\r\n]+/g, "") + "\n"
+      : nodeValue;
 
     return result;
   }
