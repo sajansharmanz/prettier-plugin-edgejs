@@ -232,7 +232,7 @@ class Printer {
         : addEdgeMustacheSpacing(node.value);
 
     result += useLineBreak
-      ? nodeValue.replace(/[\r\n]+/g, "") + "\n"
+      ? nodeValue.replace(/[\r\n]+/g, "").trimEnd() + "\n"
       : nodeValue;
 
     return result;
