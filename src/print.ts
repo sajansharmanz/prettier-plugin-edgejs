@@ -303,7 +303,13 @@ class Printer {
       previousNode?.type === "linebreak" ||
       previousNode?.type === "edgeTag";
 
-    return `${useIndentation ? this.getIndent(this.level - 1, "decrease") : this.getIndent(0, "decrease")}</${node.tagName}>`;
+    const useLineBreakAtStart =
+      previousNode?.type !== "linebreak" &&
+      previousNode?.type === "closingTag" &&
+      this.isInlineTag(previousNode.tagName) &&
+      !this.isInlineTag(node.tagName);
+
+    return `${useLineBreakAtStart ? "\n" : ""}${useIndentation ? this.getIndent(this.level - 1, "decrease") : this.getIndent(0, "decrease")}</${node.tagName}>`;
   }
 
   private printEdgeTagNode(node: EdgeTagNode) {
