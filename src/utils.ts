@@ -105,8 +105,13 @@ export function countLeadingSpaces(value: string) {
   return match ? match[0].length : 0;
 }
 
-export function formatEdgeValue(node: EdgeTagNode, indent: string) {
+export function formatEdgeValue(
+  node: EdgeTagNode,
+  indent: string,
+  useLineBreak: boolean
+) {
   return `${indent}${node.value
+    .trimEnd()
     .split("\n")
     .map((value, index) => {
       if (index === 0) {
@@ -121,5 +126,5 @@ export function formatEdgeValue(node: EdgeTagNode, indent: string) {
       return `${" ".repeat(Math.max(indent.length, originalWhitespace))}${value.trim()}`;
     })
     .join("\n")
-    .replace(/[^\S\r\n]+$/g, "")}`;
+    .replace(/[^\S\r\n]+$/g, "")}${useLineBreak ? "\n" : ""}`;
 }

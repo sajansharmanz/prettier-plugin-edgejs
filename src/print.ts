@@ -296,7 +296,8 @@ class Printer {
 
   private printClosingNode(
     node: ClosingTagNode,
-    previousNode: ParserNode | undefined
+    previousNode: ParserNode | undefined,
+    nextNode: ParserNode | undefined
   ) {
     const useIndentation =
       !this.isInlineTag(node.tagName) ||
@@ -312,7 +313,10 @@ class Printer {
     return `${useLineBreakAtStart ? "\n" : ""}${useIndentation ? this.getIndent(this.level - 1, "decrease") : this.getIndent(0, "decrease")}</${node.tagName}>`;
   }
 
-  private printEdgeTagNode(node: EdgeTagNode) {
+  private printEdgeTagNode(
+    node: EdgeTagNode,
+    nextNode: ParserNode | undefined
+  ) {
     let indentAdjustment: IndentAdjustment = "none";
     let levelOverride = this.level;
 
@@ -340,9 +344,12 @@ class Printer {
       indentAdjustment = "increase";
     }
 
+    const useLineBreak = nextNode?.type !== "linebreak";
+
     return formatEdgeValue(
       node,
-      this.getIndent(levelOverride, indentAdjustment)
+      this.getIndent(levelOverride, indentAdjustment),
+      useLineBreak
     );
   }
 
@@ -414,9 +421,9 @@ class Printer {
       case "voidTag":
         return this.printOpeningNode(node, previousNode, nextNode);
       case "closingTag":
-        return this.printClosingNode(node, previousNode);
+        return this.printClosingNode(node, previousNode, nextNode);
       case "edgeTag":
-        return this.printEdgeTagNode(node);
+        return this.printEdgeTagNode(node, nextNode);
       case "htmlText":
         return this.printHtmlTextNode(node, previousNode, nextNode);
       case "linebreak":
