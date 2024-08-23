@@ -296,8 +296,7 @@ class Printer {
 
   private printClosingNode(
     node: ClosingTagNode,
-    previousNode: ParserNode | undefined,
-    nextNode: ParserNode | undefined
+    previousNode: ParserNode | undefined
   ) {
     const useIndentation =
       !this.isInlineTag(node.tagName) ||
@@ -421,7 +420,7 @@ class Printer {
       case "voidTag":
         return this.printOpeningNode(node, previousNode, nextNode);
       case "closingTag":
-        return this.printClosingNode(node, previousNode, nextNode);
+        return this.printClosingNode(node, previousNode);
       case "edgeTag":
         return this.printEdgeTagNode(node, nextNode);
       case "htmlText":
