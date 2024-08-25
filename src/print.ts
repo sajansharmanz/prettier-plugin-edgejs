@@ -334,6 +334,7 @@ class Printer {
       node.value.includes("@debugger") ||
       node.value.includes("@newError") ||
       node.value.includes("@vite") ||
+      node.value.includes("@inertia") ||
       node.value.match(/^@include\(.*/)?.length ||
       node.value.match(/^@includeIf\(.*/)?.length ||
       !node.value.includes("(")
