@@ -296,7 +296,8 @@ class Printer {
 
   private printClosingNode(
     node: ClosingTagNode,
-    previousNode: ParserNode | undefined
+    previousNode: ParserNode | undefined,
+    nextNode: ParserNode | undefined
   ) {
     const useIndentation =
       !this.isInlineTag(node.tagName) ||
@@ -309,7 +310,17 @@ class Printer {
       this.isInlineTag(previousNode.tagName) &&
       !this.isInlineTag(node.tagName);
 
-    return `${useLineBreakAtStart ? "\n" : ""}${useIndentation ? this.getIndent(this.level - 1, "decrease") : this.getIndent(0, "decrease")}</${node.tagName}>`;
+    const useLineBreakAtEnd =
+      !this.isInlineTag(node.tagName) &&
+      nextNode?.type !== "linebreak" &&
+      !(
+        (nextNode?.type === "openingTag" ||
+          nextNode?.type === "voidTag" ||
+          nextNode?.type === "closingTag") &&
+        this.isInlineTag(nextNode.tagName)
+      );
+
+    return `${useLineBreakAtStart ? "\n" : ""}${useIndentation ? this.getIndent(this.level - 1, "decrease") : this.getIndent(0, "decrease")}</${node.tagName}>${useLineBreakAtEnd ? "\n" : ""}`;
   }
 
   private printEdgeTagNode(
@@ -344,7 +355,8 @@ class Printer {
       indentAdjustment = "increase";
     }
 
-    const useLineBreak = nextNode?.type !== "linebreak";
+    const useLineBreak =
+      nextNode?.type !== "linebreak" && !node.value.includes('\n')
 
     return formatEdgeValue(
       node,
@@ -421,7 +433,7 @@ class Printer {
       case "voidTag":
         return this.printOpeningNode(node, previousNode, nextNode);
       case "closingTag":
-        return this.printClosingNode(node, previousNode);
+        return this.printClosingNode(node, previousNode, nextNode);
       case "edgeTag":
         return this.printEdgeTagNode(node, nextNode);
       case "htmlText":

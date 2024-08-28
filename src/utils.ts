@@ -111,7 +111,6 @@ export function formatEdgeValue(
   useLineBreak: boolean
 ) {
   return `${indent}${node.value
-    .trimEnd()
     .split("\n")
     .map((value, index) => {
       if (index === 0) {
