@@ -120,6 +120,10 @@ export interface AttributeNode extends BaseNode {
   attributeValue?: string;
 }
 
+export interface DoNotPrintNode extends BaseNode {
+  type: "doNotPrint";
+}
+
 export type ParserNode =
   | DocumentNode
   | HtmlTextNode
@@ -141,6 +145,7 @@ export type ParserNode =
   | EdgeTagNode
   | EdgePropsNode
   | EdgeTagPropsNode
-  | AttributeNode;
+  | AttributeNode
+  | DoNotPrintNode;
 
 export type IndentAdjustment = "increase" | "decrease" | "none";

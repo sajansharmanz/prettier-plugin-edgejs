@@ -80,6 +80,10 @@ class Printer {
     "u",
     "var",
     "wbr",
+    "feFuncR",
+    "feFuncG",
+    "feFuncB",
+    "feFuncA",
   ]);
 
   constructor(options: ParserOptions) {
@@ -356,7 +360,7 @@ class Printer {
     }
 
     const useLineBreak =
-      nextNode?.type !== "linebreak" && !node.value.includes('\n')
+      nextNode?.type !== "linebreak" && !node.value.includes("\n");
 
     return formatEdgeValue(
       node,
