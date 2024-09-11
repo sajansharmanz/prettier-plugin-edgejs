@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "css": "^3.0.0",
-    "edgejs-parser": "^0.2.9",
+    "edgejs-parser": "^0.2.10",
     "prettier": "^3.3.3",
     "uglify-js": "^3.19.2"
   }

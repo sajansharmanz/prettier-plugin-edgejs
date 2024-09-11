@@ -22,8 +22,8 @@ export interface LineBreakNode extends BaseNode {
 export interface OpeningTagNode extends BaseNode {
   type: "openingTag";
   tagName: string;
-  edgeProps: EdgePropsNode[];
   edgeTagProps: EdgeTagPropsNode[];
+  edgeSafeMustaches: EdgeSafeMustacheNode[];
   edgeMustaches: EdgeMustacheNode[];
   attributes: AttributeNode[];
   comments: EdgeCommentNode[];
@@ -32,8 +32,8 @@ export interface OpeningTagNode extends BaseNode {
 export interface VoidTagNode extends BaseNode {
   type: "voidTag";
   tagName: string;
-  edgeProps: EdgePropsNode[];
   edgeTagProps: EdgeTagPropsNode[];
+  edgeSafeMustaches: EdgeSafeMustacheNode[];
   edgeMustaches: EdgeMustacheNode[];
   attributes: AttributeNode[];
   comments: EdgeCommentNode[];
@@ -104,11 +104,6 @@ export interface EdgeTagNode extends BaseNode {
   value: string;
 }
 
-export interface EdgePropsNode extends BaseNode {
-  type: "edgeProps";
-  value: string;
-}
-
 export interface EdgeTagPropsNode extends BaseNode {
   type: "edgeTagProps";
   value: string;
@@ -143,7 +138,6 @@ export type ParserNode =
   | EdgeSafeMustacheNode
   | EdgeEscapedMustacheNode
   | EdgeTagNode
-  | EdgePropsNode
   | EdgeTagPropsNode
   | AttributeNode
   | DoNotPrintNode;

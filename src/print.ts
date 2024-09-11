@@ -8,7 +8,6 @@ import type {
   EdgeCommentNode,
   EdgeEscapedMustacheNode,
   EdgeMustacheNode,
-  EdgePropsNode,
   EdgeSafeMustacheNode,
   EdgeTagNode,
   EdgeTagPropsNode,
@@ -30,9 +29,9 @@ import {
   addEdgeSafeMustacheSpacing,
   countLeadingSpaces,
   filterLineBreaks,
-  formatCss,
+  //formatCss,
   formatEdgeValue,
-  formatJS,
+  //formatJS,
 } from "./utils";
 
 class Printer {
@@ -136,16 +135,24 @@ class Printer {
     return attributes
       .map((attr) =>
         attr.attributeValue
-          ? `${indent}${attr.attributeName}=${addEdgeMustacheSpacing(attr.attributeValue).trim()}`
+          ? `${indent}${attr.attributeName}=${addEdgeSafeMustacheSpacing(addEdgeMustacheSpacing(attr.attributeValue)).trim()}`
           : `${indent}${attr.attributeName.trim()}`
       )
       .join(indent ? "\n" : " ");
   }
 
-  private formatEdgeProps(
-    props: EdgePropsNode[] | EdgeMustacheNode[],
+  private formatEdgeSafeMustacheProps(
+    props: EdgeSafeMustacheNode[],
     indent = ""
   ) {
+    return props
+      .map(
+        (prop) => `${indent}${addEdgeSafeMustacheSpacing(prop.value).trim()}`
+      )
+      .join(indent ? "\n" : " ");
+  }
+
+  private formatEdgeMustacheProps(props: EdgeMustacheNode[], indent = "") {
     return props
       .map((prop) => `${indent}${addEdgeMustacheSpacing(prop.value).trim()}`)
       .join(indent ? "\n" : " ");
@@ -250,13 +257,15 @@ class Printer {
     nextNode: ParserNode | undefined
   ) {
     let attrs = this.formatAttributes(node.attributes);
-    let edgeProps = this.formatEdgeProps(node.edgeProps);
     let edgeTagProps = this.formatEdgeTagProps(node.edgeTagProps);
-    let edgeMustaches = this.formatEdgeProps(node.edgeMustaches);
+    let edgeSafeMustaches = this.formatEdgeSafeMustacheProps(
+      node.edgeSafeMustaches
+    );
+    let edgeMustaches = this.formatEdgeMustacheProps(node.edgeMustaches);
     let comments = this.formatComments(node.comments);
 
     const combinedLength =
-      `${attrs} ${edgeProps} ${edgeMustaches} ${edgeTagProps} ${comments}`
+      `${attrs} ${edgeSafeMustaches} ${edgeMustaches} ${edgeTagProps} ${comments}`
         .length;
     const indentation = this.getIndent(this.level + 1);
     const tagIndentation = this.getIndent(
@@ -281,15 +290,21 @@ class Printer {
     if (combinedLength > this.printWidth || this.singleAttributePerLine) {
       const closingTag = node.type == "voidTag" ? "/>" : ">";
       attrs = this.formatAttributes(node.attributes, indentation);
-      edgeProps = this.formatEdgeProps(node.edgeProps, indentation);
       edgeTagProps = this.formatEdgeTagProps(node.edgeTagProps, indentation);
-      edgeMustaches = this.formatEdgeProps(node.edgeMustaches, indentation);
+      edgeSafeMustaches = this.formatEdgeSafeMustacheProps(
+        node.edgeSafeMustaches,
+        indentation
+      );
+      edgeMustaches = this.formatEdgeMustacheProps(
+        node.edgeMustaches,
+        indentation
+      );
       comments = this.formatComments(node.comments, indentation);
 
       const closingNewline =
         combinedLength - 2 > 0 ? `\n${closingIndentation}` : "";
 
-      return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? `\n${attrs}` : ""}${edgeMustaches ? `\n${edgeMustaches}` : ""}${edgeProps ? `\n${edgeProps}` : ""}${
+      return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? `\n${attrs}` : ""}${edgeMustaches ? `\n${edgeMustaches}` : ""}${edgeSafeMustaches ? `\n${edgeSafeMustaches}` : ""}${
         edgeTagProps
           ? `\n${this.formatMultilineValue(edgeTagProps, indentation)}`
           : ""
@@ -297,7 +312,7 @@ class Printer {
     }
 
     const closingTag = node.type == "voidTag" ? " />" : ">";
-    return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? ` ${attrs}` : ""}${edgeMustaches ? ` ${edgeMustaches}` : ""}${edgeProps ? ` ${edgeProps}` : ""}${edgeTagProps ? ` ${this.formatMultilineValue(edgeTagProps, "")}` : ""}${comments ? ` ${this.formatMultilineValue(comments, "")}` : ""}${closingTag}${useLineBreak ? "\n" : ""}`;
+    return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? ` ${attrs}` : ""}${edgeMustaches ? ` ${edgeMustaches}` : ""}${edgeSafeMustaches ? ` ${edgeSafeMustaches}` : ""}${edgeTagProps ? ` ${this.formatMultilineValue(edgeTagProps, "")}` : ""}${comments ? ` ${this.formatMultilineValue(comments, "")}` : ""}${closingTag}${useLineBreak ? "\n" : ""}`;
   }
 
   private printClosingNode(

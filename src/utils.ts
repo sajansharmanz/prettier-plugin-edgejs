@@ -33,7 +33,29 @@ export function addEdgeCommentSpacing(value: string): string {
 }
 
 export function addEdgeMustacheSpacing(value: string): string {
-  return value.replace(/{{\s*/g, "{{ ").replace(/\s*}}/g, " }}");
+  // Temporarily replace triple curly braces with a placeholder
+  const tripleCurlyRegex = /{{{[^{}]*}}}/g;
+  const tripleCurlyPlaceholder = "__TRIPLE_CURLY__";
+  const tripleCurlyContent: string[] = [];
+
+  // Replace triple curly braces with placeholders
+  value = value.replace(tripleCurlyRegex, (match) => {
+    const placeholder = `${tripleCurlyPlaceholder}${tripleCurlyContent.length}`;
+    tripleCurlyContent.push(match);
+    return placeholder;
+  });
+
+  // Format double curly braces {{ ... }} but not triple curly braces {{{ ... }}}
+  value = value
+    .replace(/{{\s*/g, "{{ ") // Match `{{` without preceding another `{`
+    .replace(/\s*}}/g, " }}"); // Match `}}` without following another `}`
+
+  // Restore triple curly braces content
+  tripleCurlyContent.forEach((content, index) => {
+    value = value.replace(`${tripleCurlyPlaceholder}${index}`, content);
+  });
+
+  return value;
 }
 
 export function addEdgeSafeMustacheSpacing(value: string): string {
