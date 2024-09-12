@@ -41,7 +41,7 @@ If the printWidth is exceeded for any HTML tag, the plugin will default to havin
 
 For block level elements opening tags, tag content and closing tags will always be on a separate line.
 
-At the moment the content within script and style tags will not be formatted. Technically we can use edge variables inside these, and current formatters available will fail to parse correctly resulting in bad formatting. I am investigating a way around this.
+`<script>` and `<style>` tags can only make use of mustache and safe mustache tags for now. Further investigations continue into how to allow other edge tags.
 
 For @let, @assign, @vite, @include, html text and comments tags, your formatting is respected.
 

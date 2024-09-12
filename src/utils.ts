@@ -68,18 +68,59 @@ export function formatCss(
   tagContentIndent: string,
   cssIndent: string
 ) {
-  const parsedCss = css.parse(
-    node.value.replace("<style>", "").replace("</style>", "")
-  );
+  // Regular expressions to match various tags
+  const styleRegex = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
+  const mustacheTagRegex = /{{.*?}}/g;
+  const safeMustacheTagRegex = /{{{.*?}}}/g;
 
-  const formattedCss = css.stringify(parsedCss, {
-    indent: cssIndent,
+  // Extract CSS content, stripping <style> tags
+  const processedContent = node.value.replace(styleRegex, (_, cssContent) => {
+    // Replace Edge tags with placeholders
+    let placeholders: string[] = [];
+    let placeholderIndex = 0;
+
+    // Replace Safe Mustache tags with placeholders
+    cssContent = cssContent.replace(
+      safeMustacheTagRegex,
+      (safeMustacheMatch: string) => {
+        const placeholder = `__SAFE_MUSTACHE_TAG_${placeholderIndex++}__;`;
+        placeholders.push(safeMustacheMatch);
+        return placeholder;
+      }
+    );
+
+    // Replace Mustache tags with placeholders
+    cssContent = cssContent.replace(
+      mustacheTagRegex,
+      (mustacheMatch: string) => {
+        const placeholder = `__MUSTACHE_TAG_${placeholderIndex++}__;`;
+        placeholders.push(mustacheMatch);
+        return placeholder;
+      }
+    );
+
+    // Parse and format the CSS
+    const parsedCss = css.parse(cssContent);
+    const formattedCss = css.stringify(parsedCss, { indent: cssIndent });
+
+    // Reinsert placeholders
+    const formattedContent = formattedCss
+      .replace(/__MUSTACHE_TAG_\d+__;/g, (placeholder) => {
+        const index = parseInt(placeholder.match(/\d+/)![0], 10);
+        return placeholders[index];
+      })
+      .replace(/__SAFE_MUSTACHE_TAG_\d+__;/g, (placeholder) => {
+        const index = parseInt(placeholder.match(/\d+/)![0], 10);
+        return placeholders[index];
+      });
+
+    return `${tagIndent}<style>\n${formattedContent
+      .split("\n")
+      .map((v) => `${tagContentIndent}${v}`)
+      .join("\n")}\n${tagIndent}</style>`;
   });
 
-  return `${tagIndent}<style>\n${formattedCss
-    .split("\n")
-    .map((v) => `${tagContentIndent}${v}`)
-    .join("\n")}\n${tagIndent}</style>`;
+  return processedContent;
 }
 
 export function formatJS(
@@ -88,17 +129,39 @@ export function formatJS(
   tagIndent: string,
   tagContentIndent: string
 ) {
-  const regex = /<script\b[^>]*src=['"][^'"]+['"][^>]*>\s*<\/script>/i;
+  // Regular expressions to match various tags
+  const scriptTagRegex = /<script\b([^>]*)>([\s\S]*?)<\/script>/i;
+  const mustacheTagRegex = /{{.*?}}/g;
+  const safeMustacheTagRegex = /{{{.*?}}}/g;
 
-  if (node.value.match(regex)) {
-    return `${tagIndent}${node.value}`;
+  // Extract the attributes and content from the <script> tag
+  const match = node.value.match(scriptTagRegex);
+  if (!match) {
+    throw new Error("Invalid <script> tag format");
   }
 
-  const content = node.value.replace("<script>", "").replace("</script>", "");
+  const [_fullMatch, attributes, scriptContent] = match;
 
+  // Replace Edge tags with placeholders
+  let placeholders: string[] = [];
+  let placeholderIndex = 0;
+
+  let processedContent = scriptContent
+    .replace(safeMustacheTagRegex, (safeMustacheMatch: string) => {
+      const placeholder = `__SAFE_MUSTACHE_TAG_${placeholderIndex++}__`;
+      placeholders.push(safeMustacheMatch);
+      return placeholder;
+    })
+    .replace(mustacheTagRegex, (mustacheMatch: string) => {
+      const placeholder = `__MUSTACHE_TAG_${placeholderIndex++}__`;
+      placeholders.push(mustacheMatch);
+      return placeholder;
+    });
+
+  // Minify and format the JavaScript
   const result = uglifyjs.minify(
     {
-      "file1.js": content,
+      "file1.js": processedContent,
     },
     {
       compress: false,
@@ -116,7 +179,19 @@ export function formatJS(
     throw new Error(JSON.stringify(result.error));
   }
 
-  return `${tagIndent}<script>\n${result.code
+  // Reinsert placeholders
+  const formattedContent = result.code
+    .replace(/__SAFE_MUSTACHE_TAG_\d+__/g, (placeholder) => {
+      const index = parseInt(placeholder.match(/\d+/)![0], 10);
+      return placeholders[index];
+    })
+    .replace(/__MUSTACHE_TAG_\d+__/g, (placeholder) => {
+      const index = parseInt(placeholder.match(/\d+/)![0], 10);
+      return placeholders[index];
+    });
+
+  // Return the formatted JavaScript wrapped with <script> tags, preserving the attributes
+  return `${tagIndent}<script${attributes}>\n${formattedContent
     .split("\n")
     .map((value) => `${tagContentIndent}${value}`)
     .join("\n")}\n${tagIndent}</script>`;

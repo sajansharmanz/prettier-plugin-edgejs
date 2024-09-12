@@ -29,9 +29,9 @@ import {
   addEdgeSafeMustacheSpacing,
   countLeadingSpaces,
   filterLineBreaks,
-  //formatCss,
+  formatCss,
   formatEdgeValue,
-  //formatJS,
+  formatJS,
 } from "./utils";
 
 class Printer {
@@ -197,13 +197,11 @@ class Printer {
   }
 
   private printScriptElementNode(node: ScriptElementNode) {
-    return `${this.formatMultilineValue(node.value, this.getIndent())}`;
-    // return `${formatJS(node, this.tabWidth, this.getIndent(), this.getIndent(this.level + 1))}`;
+    return `${formatJS(node, this.tabWidth, this.getIndent(), this.getIndent(this.level + 1))}`;
   }
 
   private printStyleElementNode(node: StyleElementNode) {
-    return `${this.formatMultilineValue(node.value, this.getIndent())}`;
-    // return `${formatCss(node, this.getIndent(), this.getIndent(this.level + 1), this.getIndent(1))}`;
+    return `${formatCss(node, this.getIndent(), this.getIndent(this.level + 1), this.getIndent(1))}`;
   }
 
   private printEdgeComment(node: EdgeCommentNode) {
