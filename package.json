@@ -32,12 +32,14 @@
     "require": "./dist/main.umd.cjs"
   },
   "scripts": {
-    "build": "vite build"
+    "build": "vite build",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/css": "^0.0.37",
     "@types/uglify-js": "^3.17.5",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "vitest": "^2.1.0"
   },
   "dependencies": {
     "css": "^3.0.0",
