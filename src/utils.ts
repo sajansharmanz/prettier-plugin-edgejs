@@ -21,15 +21,9 @@ export function filterLineBreaks(node: ParserNode) {
 }
 
 export function addEdgeCommentSpacing(value: string): string {
-  if (!value.includes("{{--\n")) {
-    value.replace(/{{--/g, "{{-- ");
-  }
-
-  if (!value.includes("\n--}}")) {
-    value.replace(/--}}/g, " --}}");
-  }
-
-  return value;
+  return value
+    .replace(/{{--(?![\s\n\r\t])/g, "{{-- ")
+    .replace(/(?<![\s\n\r\t])--}}/g, " --}}");
 }
 
 export function addEdgeMustacheSpacing(value: string): string {
