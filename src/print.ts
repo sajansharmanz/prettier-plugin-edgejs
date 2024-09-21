@@ -365,6 +365,9 @@ class Printer {
       node.value.includes("@newError") ||
       node.value.includes("@vite") ||
       node.value.includes("@inertia") ||
+      node.value.includes("@stack") ||
+      node.value.includes("@dd") ||
+      node.value.includes("@dump") ||
       node.value.match(/^@include\(.*/)?.length ||
       node.value.match(/^@includeIf\(.*/)?.length ||
       !node.value.includes("(")
