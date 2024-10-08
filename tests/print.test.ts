@@ -175,6 +175,28 @@ describe("printScriptElementNode", () => {
 </script>`
     );
   });
+
+  it("should correctly print a script element node with edge tags", () => {
+    const node: ScriptElementNode = {
+      type: "scriptElement",
+      start: 0,
+      end: 10,
+      value: `<script>
+        @if(test)
+        console.log(x);
+        @end
+    </script>`,
+    };
+
+    expect(getOutput(node)).toContain(
+      `<script>
+    @if(test)
+        console.log(x);
+    @end
+    
+</script>`
+    );
+  });
 });
 
 describe("printStyleElementNode", () => {
@@ -224,6 +246,25 @@ describe("printStyleElementNode", () => {
       `<style>
     body {
         margin: {{{test}}}
+    }
+</style>`
+    );
+  });
+
+  it("should correctly print a style element node with edge tags", () => {
+    const node: StyleElementNode = {
+      type: "styleElement",
+      start: 0,
+      end: 10,
+      value: "<style>body { @if(test) margin: 0; @end }</style>",
+    };
+
+    expect(getOutput(node)).toContain(
+      `<style>
+    body {
+        @if(test)
+            margin: 0;
+        @end
     }
 </style>`
     );

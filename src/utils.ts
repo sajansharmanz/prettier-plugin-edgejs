@@ -6,6 +6,10 @@ import {
   ScriptElementNode,
   StyleElementNode,
 } from "./types";
+import { Printer } from "./print";
+import { ParserOptions } from "prettier";
+
+import edgeParser from "edgejs-parser";
 
 const MAX_CONSECUTIVE_LINE_BREAKS = 2;
 let consecutiveCount = 0;
@@ -60,20 +64,25 @@ export function formatCss(
   node: StyleElementNode,
   tagIndent: string,
   tagContentIndent: string,
-  cssIndent: string
+  cssIndent: string,
+  options: ParserOptions,
+  levelOverride: number
 ) {
-  // Regular expressions to match various tags
   const styleRegex = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
   const mustacheTagRegex = /{{.*?}}/g;
   const safeMustacheTagRegex = /{{{.*?}}}/g;
 
+  const edgeTagBlockRegex =
+    /@(?!media|keyframes|supports|font-face|viewport|counter-style|page|document|font-feature-values)(?:!?\w+(?:\.\w+)*)\s*(?:\((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*\))?[\s\S]*?@end/g;
+
+  const singleLineEdgeTagRegex =
+    /@(assign|!component|debugger|eval|include|includeIf|inject|stack|svg|let|newError|vite|inertia|dd|dump)\s*(?:\((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*\))?/g;
+
   // Extract CSS content, stripping <style> tags
   const processedContent = node.value.replace(styleRegex, (_, cssContent) => {
-    // Replace Edge tags with placeholders
     let placeholders: string[] = [];
     let placeholderIndex = 0;
 
-    // Replace Safe Mustache tags with placeholders
     cssContent = cssContent.replace(
       safeMustacheTagRegex,
       (safeMustacheMatch: string) => {
@@ -83,7 +92,6 @@ export function formatCss(
       }
     );
 
-    // Replace Mustache tags with placeholders
     cssContent = cssContent.replace(
       mustacheTagRegex,
       (mustacheMatch: string) => {
@@ -93,25 +101,56 @@ export function formatCss(
       }
     );
 
-    // Parse and format the CSS
+    cssContent = cssContent.replace(
+      edgeTagBlockRegex,
+      (fullEdgeMatch: string) => {
+        const placeholder = `/*__EDGE_TAG_BLOCK_${placeholderIndex++}__*/`;
+        placeholders.push(fullEdgeMatch);
+        return placeholder;
+      }
+    );
+
+    cssContent = cssContent.replace(
+      singleLineEdgeTagRegex,
+      (fullEdgeMatch: string) => {
+        const placeholder = `/*__SINGLE_EDGE_TAG_${placeholderIndex++}__*/`;
+        placeholders.push(fullEdgeMatch);
+        return placeholder;
+      }
+    );
+
     const parsedCss = css.parse(cssContent);
     const formattedCss = css.stringify(parsedCss, { indent: cssIndent });
 
-    // Reinsert placeholders
-    const formattedContent = formattedCss
-      .replace(/__MUSTACHE_TAG_\d+__;/g, (placeholder) => {
-        const index = parseInt(placeholder.match(/\d+/)![0], 10);
-        return placeholders[index];
-      })
-      .replace(/__SAFE_MUSTACHE_TAG_\d+__;/g, (placeholder) => {
-        const index = parseInt(placeholder.match(/\d+/)![0], 10);
-        return placeholders[index];
-      });
-
-    return `${tagIndent}<style>\n${formattedContent
+    const formattedContent = `${tagIndent}<style>\n${formattedCss
       .split("\n")
       .map((v) => `${tagContentIndent}${v}`)
       .join("\n")}\n${tagIndent}</style>`;
+
+    return formattedContent
+      .replace(/\/\*__EDGE_TAG_BLOCK_\d+__\*\//g, (placeholder) => {
+        const originalContent =
+          placeholders[parseInt(placeholder.match(/\d+/)![0], 10)];
+
+        const parsedContent = new edgeParser(originalContent);
+
+        const printer = new Printer(
+          {
+            ...options,
+          },
+          levelOverride + 2
+        );
+        return printer.handlePrint(parsedContent).trim();
+      })
+      .replace(/__MUSTACHE_TAG_\d+__;/g, (placeholder) => {
+        return placeholders[parseInt(placeholder.match(/\d+/)![0], 10)];
+      })
+      .replace(/__SAFE_MUSTACHE_TAG_\d+__;/g, (placeholder) => {
+        return placeholders[parseInt(placeholder.match(/\d+/)![0], 10)];
+      })
+      .replace(/\/\*__SINGLE_EDGE_TAG_\d+__\*\//g, (placeholder) => {
+        return placeholders[parseInt(placeholder.match(/\d+/)![0], 10)];
+      });
   });
 
   return processedContent;
@@ -121,12 +160,19 @@ export function formatJS(
   node: ScriptElementNode,
   jsIndent: number,
   tagIndent: string,
-  tagContentIndent: string
+  tagContentIndent: string,
+  options: ParserOptions,
+  levelOverride: number
 ) {
-  // Regular expressions to match various tags
   const scriptTagRegex = /<script\b([^>]*)>([\s\S]*?)<\/script>/i;
   const mustacheTagRegex = /{{.*?}}/g;
   const safeMustacheTagRegex = /{{{.*?}}}/g;
+
+  const edgeTagBlockRegex =
+    /@(!?\w+(?:\.\w+)*)\s*(?:\((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*\))?[\s\S]*?@end/g;
+
+  const singleLineEdgeTagRegex =
+    /@(assign|!component|debugger|eval|include|includeIf|inject|stack|svg|let|newError|vite|inertia|dd|dump)\s*(?:\((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*\))?/g;
 
   // Extract the attributes and content from the <script> tag
   const match = node.value.match(scriptTagRegex);
@@ -136,7 +182,6 @@ export function formatJS(
 
   const [_fullMatch, attributes, scriptContent] = match;
 
-  // Replace Edge tags with placeholders
   let placeholders: string[] = [];
   let placeholderIndex = 0;
 
@@ -149,6 +194,16 @@ export function formatJS(
     .replace(mustacheTagRegex, (mustacheMatch: string) => {
       const placeholder = `__MUSTACHE_TAG_${placeholderIndex++}__`;
       placeholders.push(mustacheMatch);
+      return placeholder;
+    })
+    .replace(edgeTagBlockRegex, (fullEdgeMatch: string) => {
+      const placeholder = `/*__EDGE_TAG_BLOCK_${placeholderIndex++}__*/`;
+      placeholders.push(fullEdgeMatch);
+      return placeholder;
+    })
+    .replace(singleLineEdgeTagRegex, (fullEdgeMatch: string) => {
+      const placeholder = `/*__SINGLE_EDGE_TAG_${placeholderIndex++}__*/`;
+      placeholders.push(fullEdgeMatch);
       return placeholder;
     });
 
@@ -175,6 +230,23 @@ export function formatJS(
 
   // Reinsert placeholders
   const formattedContent = result.code
+    .replace(/\/\*__EDGE_TAG_BLOCK_\d+__\*\//g, (placeholder) => {
+      const index = parseInt(placeholder.match(/\d+/)![0], 10);
+      const originalContent = placeholders[index];
+
+      const parsedContent = new edgeParser(originalContent);
+      const printer = new Printer(
+        {
+          ...options,
+        },
+        0
+      );
+      return printer.handlePrint(parsedContent);
+    })
+    .replace(/\/\*__SINGLE_EDGE_TAG_\d+__\*\//g, (placeholder) => {
+      const index = parseInt(placeholder.match(/\d+/)![0], 10);
+      return placeholders[index];
+    })
     .replace(/__SAFE_MUSTACHE_TAG_\d+__/g, (placeholder) => {
       const index = parseInt(placeholder.match(/\d+/)![0], 10);
       return placeholders[index];

@@ -34,8 +34,10 @@ import {
   formatJS,
 } from "./utils";
 
-class Printer {
+export class Printer {
+  private options: ParserOptions;
   private level: number;
+  private skipLevelOverride: boolean;
   private useTabs: boolean;
   private printWidth: number;
   private tabWidth: number;
@@ -85,8 +87,13 @@ class Printer {
     "feFuncA",
   ]);
 
-  constructor(options: ParserOptions) {
-    this.level = 0;
+  constructor(
+    options: ParserOptions,
+    levelOverride: number | undefined = undefined
+  ) {
+    this.options = options;
+    this.level = levelOverride ?? 0;
+    this.skipLevelOverride = !!levelOverride;
     this.useTabs = options.useTabs ?? false;
     this.printWidth = options.printWidth ?? 80;
     this.tabWidth = options.tabWidth ?? 4;
@@ -171,7 +178,10 @@ class Printer {
   }
 
   private printDocumentNode(node: DocumentNode) {
-    this.level = 0;
+    if (!this.skipLevelOverride) {
+      this.level = 0;
+    }
+
     return node.children
       .filter(filterLineBreaks)
       .map((child, index, array) =>
@@ -193,19 +203,39 @@ class Printer {
   ) {
     const isScriptlet = node.type === "scriptlet";
 
-    return `${this.formatMultilineValue(node.value, isScriptlet ? "" : this.getIndent())}`;
+    return this.formatMultilineValue(
+      node.value,
+      isScriptlet ? "" : this.getIndent()
+    );
   }
 
   private printScriptElementNode(node: ScriptElementNode) {
-    return `${formatJS(node, this.tabWidth, this.getIndent(), this.getIndent(this.level + 1))}`;
+    return formatJS(
+      node,
+      this.tabWidth,
+      this.getIndent(),
+      this.getIndent(this.level + 1),
+      this.options,
+      this.level
+    );
   }
 
   private printStyleElementNode(node: StyleElementNode) {
-    return `${formatCss(node, this.getIndent(), this.getIndent(this.level + 1), this.getIndent(1))}`;
+    return formatCss(
+      node,
+      this.getIndent(),
+      this.getIndent(this.level + 1),
+      this.getIndent(1),
+      this.options,
+      this.level
+    );
   }
 
   private printEdgeComment(node: EdgeCommentNode) {
-    return `${this.formatMultilineValue(addEdgeCommentSpacing(node.value.trim()), this.getIndent())}`;
+    return this.formatMultilineValue(
+      addEdgeCommentSpacing(node.value.trim()),
+      this.getIndent()
+    );
   }
 
   private printEdgeMustacheNode(
@@ -428,8 +458,8 @@ class Printer {
 
   handlePrint(
     node: ParserNode,
-    previousNode: ParserNode | undefined,
-    nextNode: ParserNode | undefined
+    previousNode: ParserNode | undefined = undefined,
+    nextNode: ParserNode | undefined = undefined
   ): string {
     switch (node.type) {
       case "document":
@@ -472,7 +502,7 @@ function print(path: AstPath, options: ParserOptions) {
   const node = path.getNode();
 
   const printer = new Printer(options);
-  return printer.handlePrint(node, undefined, undefined);
+  return printer.handlePrint(node);
 }
 
 export default print;

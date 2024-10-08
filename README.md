@@ -18,7 +18,7 @@ Add as plugin in your prettier config
 }
 ```
 
-_Note: Once added you may need to restart your editor if you have an extension such as Prettier for VSCode so it auto-formats correctly on save, etc._
+_Note: Once added you may need to restart your editor (or extension host) if you have an extension such as Prettier for VSCode so it auto-formats correctly on save, etc._
 
 # Configuration
 
@@ -41,8 +41,8 @@ If the printWidth is exceeded for any HTML tag, the plugin will default to havin
 
 For block level elements opening tags, tag content and closing tags will always be on a separate line.
 
-`<script>` and `<style>` tags can only make use of mustache and safe mustache tags for now. Further investigations continue into how to allow other edge tags.
+`<script>` and `<style>` tags can make use of edgejs tags but only 1 level deep for now. Further investigation needed to support more.
 
-For @let, @assign, @vite, @include, html text and comments tags, your formatting is respected.
+For @let, @assign, @vite, @include, html text and comments tags and alike, your formatting is respected.
 
 The plugin will not format your attribute values for spacing, etc. There are too many combinations to make it feasible to support this accurately given my limited time towards the plugin.

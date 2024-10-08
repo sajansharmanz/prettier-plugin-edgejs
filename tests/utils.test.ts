@@ -13,10 +13,10 @@ import {
   EdgeTagNode,
   HtmlTextNode,
   LineBreakNode,
-  ParserNode,
   ScriptElementNode,
   StyleElementNode,
 } from "../src/types";
+import { ParserOptions } from "prettier";
 
 describe("filterLineBreaks", () => {
   it("should return true when the node is of linebreak type", () => {
@@ -90,7 +90,14 @@ describe("formatCss", () => {
       end: 10,
       value: "<style>.class { color: red; }</style>",
     };
-    const formatted = formatCss(node, "  ", "    ", "  ");
+    const formatted = formatCss(
+      node,
+      "  ",
+      "    ",
+      "  ",
+      {} as ParserOptions,
+      0
+    );
     const expected =
       "  <style>\n    .class {\n      color: red;\n    }\n  </style>";
     expect(formatted).toBe(expected);
@@ -105,7 +112,7 @@ describe("formatJS", () => {
       end: 10,
       value: "<script>const x = 1; console.log(x);</script>",
     };
-    const formatted = formatJS(node, 2, "  ", "    ");
+    const formatted = formatJS(node, 2, "  ", "    ", {} as ParserOptions, 0);
 
     const normalize = (str: string) =>
       str.replace(/\s+/g, " ").replace(/>\s+</g, "><").trim();
@@ -126,7 +133,7 @@ describe("formatJS", () => {
       end: 10,
       value: "<script defer>const x = 1; console.log(x);</script>",
     };
-    const formatted = formatJS(node, 2, "  ", "    ");
+    const formatted = formatJS(node, 2, "  ", "    ", {} as ParserOptions, 0);
 
     const normalize = (str: string) =>
       str.replace(/\s+/g, " ").replace(/>\s+</g, "><").trim();
