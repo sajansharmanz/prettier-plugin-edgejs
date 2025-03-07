@@ -5,7 +5,7 @@ This is an **_opinionated_** Prettier plugin for [EdgeJS (.edge)](https://edgejs
 # Installation
 
 ```shell
-npm i prettier-edgejs
+npm i prettier-plugin-edgejs
 ```
 
 ## Usage
@@ -14,7 +14,7 @@ Add as plugin in your prettier config
 
 ```json
 {
-  "plugins": ["prettier-edgejs"]
+  "plugins": ["prettier-plugin-edgejs"]
 }
 ```
 
