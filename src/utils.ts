@@ -1,4 +1,4 @@
-import css from "css";
+import css from "@adobe/css-tools";
 import uglifyjs from "uglify-js";
 import {
   EdgeTagNode,

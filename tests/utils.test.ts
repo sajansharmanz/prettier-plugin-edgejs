@@ -102,6 +102,27 @@ describe("formatCss", () => {
       "  <style>\n    .class {\n      color: red;\n    }\n  </style>";
     expect(formatted).toBe(expected);
   });
+
+  it("should support layer rules", () => {
+    const node: StyleElementNode = {
+      type: "styleElement",
+      start: 0,
+      end: 10,
+      value:
+        "<style>@layer test; @layer test { :root { background-color: grey; } }</style>",
+    };
+    const formatted = formatCss(
+      node,
+      "  ",
+      "    ",
+      "  ",
+      {} as ParserOptions,
+      0
+    );
+    const expected =
+      "  <style>\n    @layer test;\n    \n    @layer test {\n      :root {\n        background-color: grey;\n      }\n    }\n  </style>";
+    expect(formatted).toBe(expected);
+  });
 });
 
 describe("formatJS", () => {
