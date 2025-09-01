@@ -28,6 +28,7 @@ The plugin currently handles a few different prettier configurations
 2. **printWidth** (default: 80)
 3. **tabWidth** (default: 4)
 4. **singleAttributePerLine** (default: false)
+5. **customSingleLineEdgeTags** (default: []) (example: ['@reverse'])
 
 ## Contributing
 

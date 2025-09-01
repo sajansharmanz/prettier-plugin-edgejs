@@ -47,6 +47,7 @@ export const defaultOptions: Options = {
   tabWidth: 4,
   printWidth: 80,
   singleAttributePerLine: false,
+  customSingleLineEdgeTags: [],
 };
 
 export const options: SupportOptions = {};

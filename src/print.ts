@@ -385,22 +385,27 @@ export class Printer {
     } else if (node.value.includes("@else")) {
       levelOverride--;
     } else if (
-      node.value.includes("@!") ||
-      node.value.includes("@let") ||
-      node.value.includes("@svg") ||
-      node.value.includes("@assign") ||
-      node.value.includes("@inject") ||
-      node.value.includes("@eval") ||
-      node.value.includes("@debugger") ||
-      node.value.includes("@newError") ||
-      node.value.includes("@vite") ||
-      node.value.includes("@inertia") ||
-      node.value.includes("@stack") ||
-      node.value.includes("@dd") ||
-      node.value.includes("@dump") ||
+      (node.value.includes("@!") ||
+        node.value.includes("@let") ||
+        node.value.includes("@svg") ||
+        node.value.includes("@assign") ||
+        node.value.includes("@inject") ||
+        node.value.includes("@eval") ||
+        node.value.includes("@debugger") ||
+        node.value.includes("@newError") ||
+        node.value.includes("@vite") ||
+        node.value.includes("@inertia") ||
+        node.value.includes("@stack") ||
+        node.value.includes("@dd") ||
+        node.value.includes("@dump") ||
+        node.value.includes("@markdown") ||
+        (this.options.customSingleLineEdgeTags &&
+          (this.options.customSingleLineEdgeTags as Array<string>).includes(
+            node.value
+          )),
       node.value.match(/^@include\(.*/)?.length ||
-      node.value.match(/^@includeIf\(.*/)?.length ||
-      !node.value.includes("(")
+        node.value.match(/^@includeIf\(.*/)?.length ||
+        !node.value.includes("("))
     ) {
       indentAdjustment = "none";
     } else {

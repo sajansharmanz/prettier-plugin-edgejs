@@ -130,7 +130,7 @@ describe("printScriptElementNode", () => {
     expect(getOutput(node)).toContain(
       `<script>
     const x = 1;
-    
+
     console.log(x);
 </script>`
     );
@@ -150,7 +150,7 @@ describe("printScriptElementNode", () => {
     expect(getOutput(node)).toContain(
       `<script>
     const x = {{test}};
-    
+
     console.log(x);
 </script>`
     );
@@ -170,7 +170,7 @@ describe("printScriptElementNode", () => {
     expect(getOutput(node)).toContain(
       `<script>
     const x = {{{test}}};
-    
+
     console.log(x);
 </script>`
     );
@@ -193,7 +193,7 @@ describe("printScriptElementNode", () => {
     @if(test)
         console.log(x);
     @end
-    
+
 </script>`
     );
   });
@@ -297,8 +297,8 @@ describe("printEdgeComment", () => {
   it("should correctly print an edge comment node with line breaks that does not require spacing", () => {
     const node: EdgeCommentNode = {
       type: "edgeComment",
-      value: `{{-- 
-    Edge comment 
+      value: `{{--
+    Edge comment
     --}}`,
       start: 0,
       end: 15,
