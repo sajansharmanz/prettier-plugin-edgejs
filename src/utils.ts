@@ -14,6 +14,29 @@ import edgeParser from "edgejs-parser";
 const MAX_CONSECUTIVE_LINE_BREAKS = 2;
 let consecutiveCount = 0;
 
+const builtInSingleLineEdgeTags = [
+  "@assign",
+  "@!component",
+  "@debugger",
+  "@eval",
+  "@include",
+  "@includeIf",
+  "@inject",
+  "@stack",
+  "@svg",
+  "@let",
+  "@newError",
+  "@vite",
+  "@inertia",
+  "@dd",
+  "@dump",
+  "@markdown",
+];
+
+function escapeRegex(tag: string) {
+  return tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function filterLineBreaks(node: ParserNode) {
   if (node.type !== "linebreak") {
     consecutiveCount = 0;
@@ -75,8 +98,16 @@ export function formatCss(
   const edgeTagBlockRegex =
     /@(?!media|keyframes|supports|font-face|viewport|counter-style|page|document|font-feature-values)(?:!?\w+(?:\.\w+)*)\s*(?:\((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*\))?[\s\S]*?@end/g;
 
-  const singleLineEdgeTagRegex =
-    /@(assign|!component|debugger|eval|include|includeIf|inject|stack|svg|let|newError|vite|inertia|dd|dump)\s*(?:\((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*\))?/g;
+  const customTags = (
+    (options.customSingleLineEdgeTags as Array<string>) ?? []
+  ).map((tag) => (tag.startsWith("@") ? tag.slice(1) : tag));
+
+  const allTags = [...builtInSingleLineEdgeTags, ...customTags];
+
+  const singleLineEdgeTagRegex = new RegExp(
+    `@(${allTags.map(escapeRegex).join("|")})\\s*(?:\\((?:[^)(]+|\\((?:[^)(]+|\\([^)(]*\\))*\\))*\\))?`,
+    "g"
+  );
 
   // Extract CSS content, stripping <style> tags
   const processedContent = node.value.replace(styleRegex, (_, cssContent) => {
@@ -171,8 +202,16 @@ export function formatJS(
   const edgeTagBlockRegex =
     /@(!?\w+(?:\.\w+)*)\s*(?:\((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*\))?[\s\S]*?@end/g;
 
-  const singleLineEdgeTagRegex =
-    /@(assign|!component|debugger|eval|include|includeIf|inject|stack|svg|let|newError|vite|inertia|dd|dump)\s*(?:\((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*\))?/g;
+  const customTags = (
+    (options.customSingleLineEdgeTags as Array<string>) ?? []
+  ).map((tag) => (tag.startsWith("@") ? tag.slice(1) : tag));
+
+  const allTags = [...builtInSingleLineEdgeTags, ...customTags];
+
+  const singleLineEdgeTagRegex = new RegExp(
+    `@(${allTags.map(escapeRegex).join("|")})\\s*(?:\\((?:[^)(]+|\\((?:[^)(]+|\\([^)(]*\\))*\\))*\\))?`,
+    "g"
+  );
 
   // Extract the attributes and content from the <script> tag
   const match = node.value.match(scriptTagRegex);
@@ -259,7 +298,9 @@ export function formatJS(
   // Return the formatted JavaScript wrapped with <script> tags, preserving the attributes
   return `${tagIndent}<script${attributes}>\n${formattedContent
     .split("\n")
-    .map((value) => `${tagContentIndent}${value}`)
+    .map((value) =>
+      value.trim().length === 0 ? "" : `${tagContentIndent}${value}`
+    )
     .join("\n")}\n${tagIndent}</script>`;
 }
 
