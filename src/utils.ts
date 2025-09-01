@@ -15,22 +15,22 @@ const MAX_CONSECUTIVE_LINE_BREAKS = 2;
 let consecutiveCount = 0;
 
 const builtInSingleLineEdgeTags = [
-  "@assign",
-  "@!component",
-  "@debugger",
-  "@eval",
-  "@include",
-  "@includeIf",
-  "@inject",
-  "@stack",
-  "@svg",
-  "@let",
-  "@newError",
-  "@vite",
-  "@inertia",
-  "@dd",
-  "@dump",
-  "@markdown",
+  "assign",
+  "!component",
+  "debugger",
+  "eval",
+  "include",
+  "includeIf",
+  "inject",
+  "stack",
+  "svg",
+  "let",
+  "newError",
+  "vite",
+  "inertia",
+  "dd",
+  "dump",
+  "markdown",
 ];
 
 function escapeRegex(tag: string) {
