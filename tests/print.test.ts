@@ -755,6 +755,23 @@ describe("EdgeTagNode", () => {
 @end`
     );
   });
+
+  it("should allow edge tag to end with a tilde for swallowing lines", () => {
+    const node: EdgeTagNode = {
+      type: "edgeTag",
+      value: `@let(name = '')~
+    test
+@end`,
+      start: 0,
+      end: 0,
+    };
+
+    expect(getOutput(node)).toEqual(
+      `@let(name = '')~
+    test
+@end`
+    );
+  });
 });
 
 describe("HtmlTextNode", () => {
