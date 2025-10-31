@@ -1,3 +1,13 @@
+# ⚠️ Project Status Update
+
+Hey everyone — just a quick note that I’m stepping back from active development for a while due to personal reasons.
+I’ll still handle important security updates, but new features or non-critical changes will depend on community contributions.
+
+Pull requests are always welcome, and I’ll do my best to review and merge them promptly.
+
+Thanks for your understanding and support ❤️
+
+
 # EdgeJS Prettier Plugin
 
 This is an **_opinionated_** Prettier plugin for [EdgeJS (.edge)](https://edgejs.dev/ "EdgeJS") files.
