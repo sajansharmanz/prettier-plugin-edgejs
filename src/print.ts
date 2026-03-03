@@ -42,6 +42,8 @@ export class Printer {
   private printWidth: number;
   private tabWidth: number;
   private singleAttributePerLine: boolean;
+  private originalText: string;
+  private ignoreNext: "none" | "full" | "allAttributes" | string;
   private inlineTags = new Set([
     "a",
     "abbr",
@@ -98,6 +100,8 @@ export class Printer {
     this.printWidth = options.printWidth ?? 80;
     this.tabWidth = options.tabWidth ?? 4;
     this.singleAttributePerLine = options.singleAttributePerLine ?? false;
+    this.originalText = (options as any).originalText ?? "";
+    this.ignoreNext = "none";
   }
 
   private isInlineTag(tagName: string): boolean {
@@ -148,6 +152,31 @@ export class Printer {
       .join(indent ? "\n" : " ");
   }
 
+  private formatAttributesWithIgnore(
+    attributes: AttributeNode[],
+    directive: string,
+    indent = ""
+  ) {
+    return attributes
+      .map((attr) => {
+        const shouldIgnore =
+          directive === "allAttributes" ||
+          attr.attributeName === directive;
+
+        if (shouldIgnore) {
+          const original = this.getOriginalText(attr);
+          if (original) {
+            return `${indent}${original.trim()}`;
+          }
+        }
+
+        return attr.attributeValue
+          ? `${indent}${attr.attributeName}=${addEdgeSafeMustacheSpacing(addEdgeMustacheSpacing(attr.attributeValue)).trim()}`
+          : `${indent}${attr.attributeName.trim()}`;
+      })
+      .join(indent ? "\n" : " ");
+  }
+
   private formatEdgeSafeMustacheProps(
     props: EdgeSafeMustacheNode[],
     indent = ""
@@ -182,16 +211,142 @@ export class Printer {
       this.level = 0;
     }
 
-    return node.children
-      .filter(filterLineBreaks)
-      .map((child, index, array) =>
-        this.handlePrint(child, array[index - 1], array[index + 1])
-      )
-      .join("");
+    const children = node.children.filter(filterLineBreaks);
+    const parts: string[] = [];
+    let i = 0;
+
+    while (i < children.length) {
+      const child = children[i];
+      const prev = children[i - 1];
+      const next = children[i + 1];
+
+      if (
+        this.ignoreNext === "full" &&
+        child.type !== "linebreak" &&
+        child.type !== "htmlComment" &&
+        child.type !== "edgeComment"
+      ) {
+        this.ignoreNext = "none";
+
+        if (child.type === "openingTag") {
+          let depth = 1;
+          let j = i + 1;
+          while (j < children.length && depth > 0) {
+            const sibling = children[j];
+            if (
+              sibling.type === "openingTag" &&
+              sibling.tagName === child.tagName
+            ) {
+              depth++;
+            } else if (
+              sibling.type === "closingTag" &&
+              sibling.tagName === child.tagName
+            ) {
+              depth--;
+            }
+            if (depth > 0) j++;
+          }
+
+          if (j < children.length && this.originalText) {
+            const closingNode = children[j];
+            const startPos = child.start - 1;
+            let endPos = closingNode.end;
+            while (
+              endPos < this.originalText.length &&
+              this.originalText[endPos] !== ">"
+            ) {
+              endPos++;
+            }
+            if (endPos < this.originalText.length) endPos++;
+
+            const original = this.originalText.substring(startPos, endPos);
+            parts.push(`${this.getIndent()}${original.trim()}\n`);
+            i = j + 1;
+            continue;
+          }
+        }
+
+        const original = this.getOriginalText(child);
+        if (original) {
+          parts.push(`${this.getIndent()}${original.trim()}\n`);
+          i++;
+          continue;
+        }
+      }
+
+      parts.push(this.handlePrint(child, prev, next));
+      i++;
+    }
+
+    return parts.join("");
   }
 
   private printDTDNode(node: DtdNode) {
     return `${this.getIndent()}${node.value}`;
+  }
+
+  private parseIgnoreDirective(
+    text: string
+  ): "none" | "full" | "allAttributes" | string {
+    const match = text.match(
+      /prettier-ignore-attribute(?:\s+\(?\s*([\w-]+)\s*\)?)?/
+    );
+    if (match) {
+      return match[1] ? match[1] : "allAttributes";
+    }
+    if (/prettier-ignore(?!-)/.test(text)) {
+      return "full";
+    }
+    return "none";
+  }
+
+  private getOriginalText(node: ParserNode): string {
+    if (!this.originalText) return "";
+
+    if (node.type === "attribute") {
+      let endPos = node.end;
+      if (node.attributeValue && node.attributeValue.startsWith('"')) {
+        while (endPos < this.originalText.length && this.originalText[endPos] !== '"') {
+          endPos++;
+        }
+        if (endPos < this.originalText.length) endPos++;
+      }
+      return this.originalText.substring(node.start, endPos);
+    }
+
+    if (node.type === "openingTag" || node.type === "voidTag") {
+      let startPos = node.start - 1;
+      let endPos = node.end;
+
+      if (node.attributes && node.attributes.length > 0) {
+        endPos = Math.max(endPos, ...node.attributes.map((a) => a.end));
+      }
+
+      while (
+        endPos < this.originalText.length &&
+        this.originalText[endPos] !== ">" &&
+        this.originalText[endPos] !== "/"
+      ) {
+        endPos++;
+      }
+      if (
+        endPos < this.originalText.length &&
+        this.originalText[endPos] === "/"
+      ) {
+        endPos++;
+        while (
+          endPos < this.originalText.length &&
+          this.originalText[endPos] !== ">"
+        ) {
+          endPos++;
+        }
+      }
+      if (endPos < this.originalText.length) endPos++;
+
+      return this.originalText.substring(startPos, endPos);
+    }
+
+    return this.originalText.substring(node.start, node.end);
   }
 
   private printStandardNode(
@@ -202,6 +357,13 @@ export class Printer {
       | ScriptletNode
   ) {
     const isScriptlet = node.type === "scriptlet";
+
+    if (node.type === "htmlComment") {
+      const directive = this.parseIgnoreDirective(node.value);
+      if (directive !== "none") {
+        this.ignoreNext = directive;
+      }
+    }
 
     return this.formatMultilineValue(
       node.value,
@@ -232,6 +394,11 @@ export class Printer {
   }
 
   private printEdgeComment(node: EdgeCommentNode) {
+    const directive = this.parseIgnoreDirective(node.value);
+    if (directive !== "none") {
+      this.ignoreNext = directive;
+    }
+
     return this.formatMultilineValue(
       addEdgeCommentSpacing(node.value.trim()),
       this.getIndent()
@@ -282,9 +449,15 @@ export class Printer {
   private printOpeningNode(
     node: OpeningTagNode | VoidTagNode,
     previousNode: ParserNode | undefined,
-    nextNode: ParserNode | undefined
+    nextNode: ParserNode | undefined,
+    ignoreAttributeDirective: string | undefined = undefined
   ) {
-    let attrs = this.formatAttributes(node.attributes);
+    let attrs = ignoreAttributeDirective
+      ? this.formatAttributesWithIgnore(
+        node.attributes,
+        ignoreAttributeDirective
+      )
+      : this.formatAttributes(node.attributes);
     let edgeTagProps = this.formatEdgeTagProps(node.edgeTagProps);
     let edgeSafeMustaches = this.formatEdgeSafeMustacheProps(
       node.edgeSafeMustaches
@@ -317,7 +490,13 @@ export class Printer {
 
     if (combinedLength > this.printWidth || this.singleAttributePerLine) {
       const closingTag = node.type == "voidTag" ? "/>" : ">";
-      attrs = this.formatAttributes(node.attributes, indentation);
+      attrs = ignoreAttributeDirective
+        ? this.formatAttributesWithIgnore(
+          node.attributes,
+          ignoreAttributeDirective,
+          indentation
+        )
+        : this.formatAttributes(node.attributes, indentation);
       edgeTagProps = this.formatEdgeTagProps(node.edgeTagProps, indentation);
       edgeSafeMustaches = this.formatEdgeSafeMustacheProps(
         node.edgeSafeMustaches,
@@ -332,11 +511,10 @@ export class Printer {
       const closingNewline =
         combinedLength - 2 > 0 ? `\n${closingIndentation}` : "";
 
-      return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? `\n${attrs}` : ""}${edgeMustaches ? `\n${edgeMustaches}` : ""}${edgeSafeMustaches ? `\n${edgeSafeMustaches}` : ""}${
-        edgeTagProps
-          ? `\n${this.formatMultilineValue(edgeTagProps, indentation)}`
-          : ""
-      }${comments ? `\n${this.formatMultilineValue(comments, indentation)}` : ""}${closingNewline}${closingTag}${useLineBreak ? "\n" : ""}`;
+      return `${useIndentation ? tagIndentation : ""}<${node.tagName}${attrs ? `\n${attrs}` : ""}${edgeMustaches ? `\n${edgeMustaches}` : ""}${edgeSafeMustaches ? `\n${edgeSafeMustaches}` : ""}${edgeTagProps
+        ? `\n${this.formatMultilineValue(edgeTagProps, indentation)}`
+        : ""
+        }${comments ? `\n${this.formatMultilineValue(comments, indentation)}` : ""}${closingNewline}${closingTag}${useLineBreak ? "\n" : ""}`;
     }
 
     const closingTag = node.type == "voidTag" ? " />" : ">";
@@ -465,6 +643,20 @@ export class Printer {
     previousNode: ParserNode | undefined = undefined,
     nextNode: ParserNode | undefined = undefined
   ): string {
+    if (
+      this.ignoreNext !== "none" &&
+      this.ignoreNext !== "full" &&
+      node.type !== "linebreak" &&
+      node.type !== "htmlComment" &&
+      node.type !== "edgeComment" &&
+      (node.type === "openingTag" || node.type === "voidTag")
+    ) {
+      const directive = this.ignoreNext;
+      this.ignoreNext = "none";
+
+      return this.printOpeningNode(node, previousNode, nextNode, directive);
+    }
+
     switch (node.type) {
       case "document":
         return this.printDocumentNode(node);

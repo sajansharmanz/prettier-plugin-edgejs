@@ -811,3 +811,218 @@ describe("DoNotPrintNode", () => {
     expect(getOutput(node)).toEqual("");
   });
 });
+
+describe("prettier-ignore", () => {
+  function getDocOutput(originalText: string, children: ParserNode[]) {
+    const node: DocumentNode = {
+      type: "document",
+      start: 0,
+      end: originalText.length,
+      children,
+    };
+    const opts = { ...options, originalText } as ParserOptions;
+    return print(createPath(node), opts);
+  }
+
+  describe("HTML comment: <!-- prettier-ignore -->", () => {
+    it("should preserve original formatting of the next node", () => {
+      const source = `<!-- prettier-ignore -->\n<div   class="x" >hello</div >`;
+      const result = getDocOutput(source, [
+        { type: "htmlComment", value: "<!-- prettier-ignore -->", start: 1, end: 24 },
+        { type: "linebreak", value: "\n", start: 25, end: 25 },
+        {
+          type: "openingTag", tagName: "div",
+          attributes: [{ type: "attribute", attributeName: "class", attributeValue: '"x"', start: 32, end: 40 } as AttributeNode],
+          edgeTagProps: [], edgeSafeMustaches: [], edgeMustaches: [], comments: [],
+          start: 26, end: 43,
+        } as OpeningTagNode,
+        { type: "htmlText", value: "hello", start: 44, end: 48 },
+        { type: "closingTag", tagName: "div", start: 49, end: 55 } as ClosingTagNode,
+      ]);
+      expect(result).toContain("<!-- prettier-ignore -->");
+      expect(result).toContain(`<div   class="x" >`);
+    });
+
+    it("should only affect the immediate next node", () => {
+      const source = `<!-- prettier-ignore -->\n<div   class="x" >bad</div>\n<div class="y">good</div>`;
+      const result = getDocOutput(source, [
+        { type: "htmlComment", value: "<!-- prettier-ignore -->", start: 1, end: 24 },
+        { type: "linebreak", value: "\n", start: 25, end: 25 },
+        {
+          type: "openingTag", tagName: "div",
+          attributes: [{ type: "attribute", attributeName: "class", attributeValue: '"x"', start: 32, end: 40 } as AttributeNode],
+          edgeTagProps: [], edgeSafeMustaches: [], edgeMustaches: [], comments: [],
+          start: 26, end: 43,
+        } as OpeningTagNode,
+        { type: "htmlText", value: "bad", start: 44, end: 46 },
+        { type: "closingTag", tagName: "div", start: 47, end: 52 } as ClosingTagNode,
+        { type: "linebreak", value: "\n", start: 53, end: 53 },
+        {
+          type: "openingTag", tagName: "div",
+          attributes: [{ type: "attribute", attributeName: "class", attributeValue: '"y"', start: 60, end: 68 } as AttributeNode],
+          edgeTagProps: [], edgeSafeMustaches: [], edgeMustaches: [], comments: [],
+          start: 54, end: 69,
+        } as OpeningTagNode,
+        { type: "htmlText", value: "good", start: 70, end: 73 },
+        { type: "closingTag", tagName: "div", start: 74, end: 79 } as ClosingTagNode,
+      ]);
+      expect(result).toContain(`<div   class="x" >`);
+      expect(result).toContain(`<div class="y">`);
+    });
+  });
+
+  describe("Edge comment: {{-- prettier-ignore --}}", () => {
+    it("should preserve original formatting of the next node", () => {
+      const source = `{{-- prettier-ignore --}}\n<div   class="x" >hello</div >`;
+      const result = getDocOutput(source, [
+        { type: "edgeComment", value: "{{-- prettier-ignore --}}", start: 1, end: 25 },
+        { type: "linebreak", value: "\n", start: 26, end: 26 },
+        {
+          type: "openingTag", tagName: "div",
+          attributes: [{ type: "attribute", attributeName: "class", attributeValue: '"x"', start: 33, end: 41 } as AttributeNode],
+          edgeTagProps: [], edgeSafeMustaches: [], edgeMustaches: [], comments: [],
+          start: 27, end: 44,
+        } as OpeningTagNode,
+        { type: "htmlText", value: "hello", start: 45, end: 49 },
+        { type: "closingTag", tagName: "div", start: 50, end: 56 } as ClosingTagNode,
+      ]);
+      expect(result).toContain("{{-- prettier-ignore --}}");
+      expect(result).toContain(`<div   class="x" >`);
+    });
+  });
+
+  describe("HTML comment: <!-- prettier-ignore-attribute -->", () => {
+    it("should preserve all attribute formatting but still format tag structure", () => {
+      const source = `<!-- prettier-ignore-attribute -->\n<div  class="x"   id="y" >hello</div>`;
+      const result = getDocOutput(source, [
+        { type: "htmlComment", value: "<!-- prettier-ignore-attribute -->", start: 1, end: 33 },
+        { type: "linebreak", value: "\n", start: 34, end: 34 },
+        {
+          type: "openingTag", tagName: "div",
+          attributes: [
+            { type: "attribute", attributeName: "class", attributeValue: '"x"', start: 41, end: 50 } as AttributeNode,
+            { type: "attribute", attributeName: "id", attributeValue: '"y"', start: 54, end: 59 } as AttributeNode,
+          ],
+          edgeTagProps: [], edgeSafeMustaches: [], edgeMustaches: [], comments: [],
+          start: 35, end: 61,
+        } as OpeningTagNode,
+        { type: "htmlText", value: "hello", start: 62, end: 66 },
+        { type: "closingTag", tagName: "div", start: 67, end: 72 } as ClosingTagNode,
+      ]);
+      expect(result).toContain("<!-- prettier-ignore-attribute -->");
+      expect(result).toContain(`class="x"`);
+      expect(result).toContain(`id="y"`);
+    });
+  });
+
+  describe("Edge comment: {{-- prettier-ignore-attribute --}}", () => {
+    it("should preserve all attribute formatting but still format tag structure", () => {
+      const source = `{{-- prettier-ignore-attribute --}}\n<div  class="x"   id="y" >hello</div>`;
+      const result = getDocOutput(source, [
+        { type: "edgeComment", value: "{{-- prettier-ignore-attribute --}}", start: 1, end: 34 },
+        { type: "linebreak", value: "\n", start: 35, end: 35 },
+        {
+          type: "openingTag", tagName: "div",
+          attributes: [
+            { type: "attribute", attributeName: "class", attributeValue: '"x"', start: 42, end: 51 } as AttributeNode,
+            { type: "attribute", attributeName: "id", attributeValue: '"y"', start: 55, end: 60 } as AttributeNode,
+          ],
+          edgeTagProps: [], edgeSafeMustaches: [], edgeMustaches: [], comments: [],
+          start: 36, end: 62,
+        } as OpeningTagNode,
+        { type: "htmlText", value: "hello", start: 63, end: 67 },
+        { type: "closingTag", tagName: "div", start: 68, end: 73 } as ClosingTagNode,
+      ]);
+      expect(result).toContain("{{-- prettier-ignore-attribute --}}");
+      expect(result).toContain(`class="x"`);
+      expect(result).toContain(`id="y"`);
+    });
+  });
+
+  describe("HTML comment: <!-- prettier-ignore-attribute (name) -->", () => {
+    it("should preserve only the named attribute, format others", () => {
+      const source = `<!-- prettier-ignore-attribute (id) -->\n<div  class="x"   id="y" >hello</div>`;
+      const result = getDocOutput(source, [
+        { type: "htmlComment", value: "<!-- prettier-ignore-attribute (id) -->", start: 1, end: 38 },
+        { type: "linebreak", value: "\n", start: 39, end: 39 },
+        {
+          type: "openingTag", tagName: "div",
+          attributes: [
+            { type: "attribute", attributeName: "class", attributeValue: '"x"', start: 46, end: 55 } as AttributeNode,
+            { type: "attribute", attributeName: "id", attributeValue: '"y"', start: 58, end: 64 } as AttributeNode,
+          ],
+          edgeTagProps: [], edgeSafeMustaches: [], edgeMustaches: [], comments: [],
+          start: 40, end: 66,
+        } as OpeningTagNode,
+        { type: "htmlText", value: "hello", start: 67, end: 71 },
+        { type: "closingTag", tagName: "div", start: 72, end: 77 } as ClosingTagNode,
+      ]);
+      expect(result).toContain("<!-- prettier-ignore-attribute (id) -->");
+      expect(result).toContain(`class="x"`);
+      expect(result).toContain(`id="y"`);
+    });
+  });
+
+  describe("Edge comment: {{-- prettier-ignore-attribute (name) --}}", () => {
+    it("should preserve only the named attribute, format others", () => {
+      const source = `{{-- prettier-ignore-attribute (id) --}}\n<div  class="x"   id="y" >hello</div>`;
+      const result = getDocOutput(source, [
+        { type: "edgeComment", value: "{{-- prettier-ignore-attribute (id) --}}", start: 1, end: 39 },
+        { type: "linebreak", value: "\n", start: 40, end: 40 },
+        {
+          type: "openingTag", tagName: "div",
+          attributes: [
+            { type: "attribute", attributeName: "class", attributeValue: '"x"', start: 47, end: 56 } as AttributeNode,
+            { type: "attribute", attributeName: "id", attributeValue: '"y"', start: 59, end: 65 } as AttributeNode,
+          ],
+          edgeTagProps: [], edgeSafeMustaches: [], edgeMustaches: [], comments: [],
+          start: 41, end: 67,
+        } as OpeningTagNode,
+        { type: "htmlText", value: "hello", start: 68, end: 72 },
+        { type: "closingTag", tagName: "div", start: 73, end: 78 } as ClosingTagNode,
+      ]);
+      expect(result).toContain("{{-- prettier-ignore-attribute (id) --}}");
+      expect(result).toContain(`class="x"`);
+      expect(result).toContain(`id="y"`);
+    });
+  });
+
+  describe("edge cases", () => {
+    it("should not crash when ignore comment is the last node", () => {
+      const source = `<!-- prettier-ignore -->`;
+      const result = getDocOutput(source, [
+        { type: "htmlComment", value: "<!-- prettier-ignore -->", start: 1, end: 24 },
+      ]);
+      expect(result).toContain("<!-- prettier-ignore -->");
+    });
+
+    it("should handle multiple consecutive ignore comments", () => {
+      const source = `<!-- prettier-ignore -->\n<div   class="a" >A</div>\n<!-- prettier-ignore -->\n<div   class="b" >B</div>`;
+      const result = getDocOutput(source, [
+        { type: "htmlComment", value: "<!-- prettier-ignore -->", start: 1, end: 24 },
+        { type: "linebreak", value: "\n", start: 25, end: 25 },
+        {
+          type: "openingTag", tagName: "div",
+          attributes: [{ type: "attribute", attributeName: "class", attributeValue: '"a"', start: 32, end: 40 } as AttributeNode],
+          edgeTagProps: [], edgeSafeMustaches: [], edgeMustaches: [], comments: [],
+          start: 26, end: 43,
+        } as OpeningTagNode,
+        { type: "htmlText", value: "A", start: 44, end: 44 },
+        { type: "closingTag", tagName: "div", start: 45, end: 50 } as ClosingTagNode,
+        { type: "linebreak", value: "\n", start: 51, end: 51 },
+        { type: "htmlComment", value: "<!-- prettier-ignore -->", start: 52, end: 75 },
+        { type: "linebreak", value: "\n", start: 76, end: 76 },
+        {
+          type: "openingTag", tagName: "div",
+          attributes: [{ type: "attribute", attributeName: "class", attributeValue: '"b"', start: 83, end: 91 } as AttributeNode],
+          edgeTagProps: [], edgeSafeMustaches: [], edgeMustaches: [], comments: [],
+          start: 77, end: 94,
+        } as OpeningTagNode,
+        { type: "htmlText", value: "B", start: 95, end: 95 },
+        { type: "closingTag", tagName: "div", start: 96, end: 101 } as ClosingTagNode,
+      ]);
+      expect(result).toContain(`<div   class="a" >`);
+      expect(result).toContain(`<div   class="b" >`);
+    });
+  });
+});
