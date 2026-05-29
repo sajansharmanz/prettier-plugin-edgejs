@@ -1,3 +1,10 @@
+# No longer maintained as of 29 May 2026
+
+The AdonisJS team have finally got around to creating their own fully supported and maintained version of a prettier plugin. Therefore, this package will no longer be maintained.
+
+It is recommended to update your `@adonisjs/prettier-config` to the latest to enable its use.
+
+---
 # ⚠️ Project Status Update
 
 Hey everyone — just a quick note that I’m stepping back from active development for a while due to personal reasons.
